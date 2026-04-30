@@ -1,0 +1,194 @@
+{
+  "pillars": [
+    {
+      "name": "Signal-Based Outbound",
+      "role": "what_i_do",
+      "description": "I build outbound systems that book meetings. Clay + Make + Lemlist — wired together so your pipeline doesn't depend on cold calling.",
+      "purposes": [
+        "Show founders how signal-based outbound actually works",
+        "Break down the infrastructure behind booked meetings",
+        "Position the 1:1 GTM build as the obvious next step"
+      ]
+    },
+    {
+      "name": "AI-Native GTM Engineering",
+      "role": "my_edge",
+      "description": "I'm building GTM tools with Claude Code. Replacing bloated stacks with custom-built systems that do more, cost less, and actually work.",
+      "purposes": [
+        "Show what's possible when you stop duct-taping tools together",
+        "Challenge the Clay + Apollo + n8n orthodoxy",
+        "Attract technical founders who want a better way"
+      ]
+    },
+    {
+      "name": "Founder in the Trenches",
+      "role": "who_i_am",
+      "description": "I went from building outbound for Europe's biggest scaleup to doing it for SaaS founders in the Middle East. This is what the journey looks like.",
+      "purposes": [
+        "Build trust through real stories and lessons",
+        "Connect with SaaS founders who are in the same fight",
+        "Make the brand human — not just a service page"
+      ]
+    }
+  ],
+  "treadmill": [
+    {
+      "angle": "Lesson",
+      "category": "Personal",
+      "ideas": {
+        "Signal-Based Outbound": "The first outbound system I built booked 0 meetings in week one. Here's what I changed in week two.",
+        "AI-Native GTM Engineering": "I tried replacing my entire Clay workflow with Claude Code. Some things broke. Some things got 10x better.",
+        "Founder in the Trenches": "I moved from working with a European scaleup to serving Middle East founders. Biggest lesson: the playbook doesn't copy-paste."
+      }
+    },
+    {
+      "angle": "Story",
+      "category": "Personal",
+      "ideas": {
+        "Signal-Based Outbound": "A founder told me 'outbound doesn't work for us.' 4 weeks later he had 23 booked meetings. Here's what happened.",
+        "AI-Native GTM Engineering": "I spent a weekend building a custom prospecting tool with Claude Code. It replaced 3 paid subscriptions.",
+        "Founder in the Trenches": "I once sat in a pitch meeting where the founder's entire pipeline was 'referrals and hope.' That conversation changed how I sell."
+      }
+    },
+    {
+      "angle": "Tips",
+      "category": "Teach",
+      "ideas": {
+        "Signal-Based Outbound": "3 signals that tell you a prospect is ready to buy — before you ever send the first email.",
+        "AI-Native GTM Engineering": "How to use Claude Code to auto-enrich leads without paying Apollo $500/mo.",
+        "Founder in the Trenches": "You're a SaaS founder doing $1M ARR. Here's where your first outbound hire should actually sit in the org."
+      }
+    },
+    {
+      "angle": "Wins",
+      "category": "Show",
+      "ideas": {
+        "Signal-Based Outbound": "Client went from 0 outbound to 41 qualified meetings in 30 days. Here's the exact system we built.",
+        "AI-Native GTM Engineering": "Built a custom intent-scoring tool with Claude Code in 3 hours. It outperformed our old Clay flow.",
+        "Founder in the Trenches": "Just wrapped a GTM build with a Dubai-based SaaS founder. He called it 'the best money I've spent this year.'"
+      }
+    },
+    {
+      "angle": "Education",
+      "category": "Teach",
+      "ideas": {
+        "Signal-Based Outbound": "Cold calling vs. signal-based outbound. One is a slot machine. The other is a system. Here's the difference.",
+        "AI-Native GTM Engineering": "What is GTM engineering? Most founders confuse it with sales ops. It's not even close.",
+        "Founder in the Trenches": "The 3 stages of outbound maturity for SaaS startups — and how to know which one you're stuck in."
+      }
+    },
+    {
+      "angle": "Mistakes",
+      "category": "Show",
+      "ideas": {
+        "Signal-Based Outbound": "I built a client's outbound system with zero warm-up. The domain got burned in 5 days. Don't do this.",
+        "AI-Native GTM Engineering": "I automated a workflow that should've stayed manual. Cost the client 200 bad leads. Here's why context matters more than speed.",
+        "Founder in the Trenches": "Biggest mistake I made early on: building systems before understanding the founder's ICP. Infrastructure without direction is just expensive noise."
+      }
+    },
+    {
+      "angle": "Case study",
+      "category": "Show",
+      "ideas": {
+        "Signal-Based Outbound": "How we built a full Clay + Make + Lemlist pipeline for a $2M ARR SaaS in Riyadh — from zero.",
+        "AI-Native GTM Engineering": "Replaced a founder's $1,200/mo tool stack with a Claude Code build. Same output. 80% cheaper.",
+        "Founder in the Trenches": "A founder came to me after burning $40k on an SDR team with no infrastructure. Here's how we rebuilt everything in 4 weeks."
+      }
+    },
+    {
+      "angle": "Advantage",
+      "category": "Teach",
+      "ideas": {
+        "Signal-Based Outbound": "Your competitors are still cold calling lists from 2022. Signal-based outbound is how you show up first.",
+        "AI-Native GTM Engineering": "The founders building their own GTM tools with AI will outpace everyone still duct-taping SaaS products together.",
+        "Founder in the Trenches": "Being in the Middle East isn't a disadvantage for outbound. It's actually an edge — and most founders don't see it yet."
+      }
+    },
+    {
+      "angle": "Opinion",
+      "category": "Personal",
+      "ideas": {
+        "Signal-Based Outbound": "Cold calling isn't dead. It's just the laziest way to fill a pipeline in 2025.",
+        "AI-Native GTM Engineering": "Clay is great. But if you can't build custom tools on top of it, you'll always be stuck with someone else's workflow.",
+        "Founder in the Trenches": "Most SaaS founders don't have a lead gen problem. They have an infrastructure problem."
+      }
+    },
+    {
+      "angle": "Strategy",
+      "category": "Teach",
+      "ideas": {
+        "Signal-Based Outbound": "The exact 4-week timeline I use to take a SaaS founder from 'no outbound' to 'booked meetings every week.'",
+        "AI-Native GTM Engineering": "How to evaluate whether to buy a tool or build one with Claude Code. The decision tree I use every time.",
+        "Founder in the Trenches": "You're at $1M ARR and want to hit $3M. Here's where outbound fits in your growth strategy — and where it doesn't."
+      }
+    }
+  ],
+  "weekly_schedule": [
+    {
+      "day": "Mon",
+      "angle": "Case study",
+      "pillar": "Signal-Based Outbound",
+      "category": "Show/Invite",
+      "funnel": "Bottom"
+    },
+    {
+      "day": "Tue",
+      "angle": "Tips",
+      "pillar": "AI-Native GTM Engineering",
+      "category": "Teach",
+      "funnel": "Middle"
+    },
+    {
+      "day": "Wed",
+      "angle": "Wins",
+      "pillar": "Signal-Based Outbound",
+      "category": "Show",
+      "funnel": "Middle"
+    },
+    {
+      "day": "Thu",
+      "angle": "Opinion",
+      "pillar": "Founder in the Trenches",
+      "category": "Personal",
+      "funnel": "Top"
+    },
+    {
+      "day": "Fri",
+      "angle": "Lead magnet / Newsletter promo",
+      "pillar": "Signal-Based Outbound",
+      "category": "Invite",
+      "funnel": "Bottom"
+    },
+    {
+      "day": "Sat",
+      "angle": "Case study",
+      "pillar": "AI-Native GTM Engineering",
+      "category": "Invite",
+      "funnel": "Bottom"
+    },
+    {
+      "day": "Sun",
+      "angle": "Story",
+      "pillar": "Founder in the Trenches",
+      "category": "Personal",
+      "funnel": "Top"
+    }
+  ],
+  "ctas": {
+    "main_offer": [
+      "PS. I build signal-based outbound systems for SaaS founders. Clay + Make + Lemlist — done with you in 4 weeks. DM me 'GTM' if you want in.",
+      "PS. If you're a SaaS founder doing $500k–$5M and your pipeline is inconsistent — I fix that. 4-week GTM build. DM me.",
+      "PS. I've built outbound infrastructure for 3+ startups and scaleups. Now I do it 1:1 with founders. DM 'BUILD' to talk."
+    ],
+    "newsletter": [
+      "PS. I break down GTM systems, outbound plays, and Claude Code builds every week. Subscribe here → {newsletter_url}",
+      "PS. Every week I share what's working in signal-based outbound. No fluff. Just systems. Join here → {newsletter_url}",
+      "PS. I write about building outbound machines for SaaS founders. Get it in your inbox → {newsletter_url}"
+    ],
+    "waitlist": [
+      "PS. I'm opening spots for the next GTM build cohort. Get on the waitlist → {lead_magnet_url}",
+      "PS. The GTM build program is how SaaS founders go from zero outbound to booked meetings in 4 weeks. Waitlist is open → {lead_magnet_url}",
+      "PS. Want me to build your outbound system with you? The GTM build program waitlist is live → {lead_magnet_url}"
+    ]
+  }
+}

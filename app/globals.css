@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+:root {
+  --vl-bg: #ffffff;
+  --vl-bg-soft: #fafafa;
+  --vl-bg-card: rgba(0, 0, 0, 0.02);
+  --vl-bg-card-hover: rgba(0, 0, 0, 0.04);
+  --vl-border: rgba(0, 0, 0, 0.08);
+  --vl-text: #334155;
+  --vl-text-muted: #64748b;
+  --vl-text-heading: #0f172a;
+  --vl-accent: #f97316;
+  --vl-accent-hover: #ea580c;
+  --vl-accent-glow: rgba(249, 115, 22, 0.1);
+}
+
+@theme inline {
+  --color-background: var(--vl-bg);
+  --color-foreground: var(--vl-text);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-space-grotesk);
+}
+
+body {
+  background: var(--vl-bg-soft);
+  color: var(--vl-text);
+  font-family: var(--font-inter), Inter, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-space-grotesk), "Space Grotesk", sans-serif;
+  color: var(--vl-text-heading);
+  letter-spacing: -0.01em;
+}

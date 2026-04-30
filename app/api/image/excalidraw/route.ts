@@ -29,45 +29,26 @@ async function getAnthropicKey(): Promise<string> {
   throw new Error("ANTHROPIC_API_KEY not found");
 }
 
-const SYSTEM_PROMPT = `You generate Excalidraw scene JSON for hand-drawn diagrams used in LinkedIn content.
+const SYSTEM_PROMPT = `You generate Excalidraw v2 scene JSON for hand-drawn LinkedIn diagrams. Be CONCISE — keep total output under 5000 tokens. Most diagrams need 4-8 elements, not 30.
 
-Visual style (always apply):
-- Background: #14141c (dark mode)
-- Accent: Periwinkle #8182C1 (never generic blue or purple)
-- Font: fontFamily: 1 (Virgil, handwritten) for ALL text
-- Boxes: strokeStyle "dotted", roughness 2, roundness {"type":3}, strokeWidth 2
-- Arrows: strokeStyle "solid", roughness 1, periwinkle stroke
-- Titles: lowercase, free-floating text (no container), color #A3A4D8, fontSize 32-40
-- Subtitles: free-floating, color #7a7580, fontSize 16-18
-- Labels inside boxes: color #f0edee, fontSize 18-24, centered
-- Evidence/sub text under boxes: free-floating, color #7a7580, fontSize 13-15
+Style (always):
+- bg #14141c, accent periwinkle #8182C1, fontFamily 1 (Virgil)
+- Boxes: strokeStyle "dotted", roughness 2, roundness {"type":3}, strokeWidth 2, fill #1e1e2e, stroke #8182C1
+- Arrows: strokeStyle "solid", roughness 1, stroke #8182C1
+- Title: lowercase, free-floating, fontSize 36, color #A3A4D8
+- Box labels: fontSize 22, color #f0edee, centered
+- Sub-text under boxes: fontSize 14, color #7a7580
+- Use #4ade80 stroke for the final success/output box
 
-Color semantics for box strokes:
-- Process steps: #8182C1 (periwinkle)
-- AI/agent steps: #A3A4D8 (lighter periwinkle)
-- Start/end success: #4ade80 (green)
-- Decision: #A3A4D8
-- Warning: #f87171
+Required fields per element (don't omit):
+- All: id, type, x, y, width, height, strokeColor, backgroundColor, fillStyle "solid", strokeWidth, strokeStyle, roughness, opacity 100, angle 0, seed (any int), version 1, versionNonce (any int), isDeleted false, groupIds [], boundElements null or [{id,type:"text"}], link null, locked false
+- Rectangle: + roundness {"type":3}
+- Text: + text, originalText, fontSize, fontFamily 1, textAlign "center", verticalAlign "middle", containerId (string or null), lineHeight 1.25
+- Arrow: + points [[0,0],[w,0]], startBinding {elementId,focus:0,gap:4}, endBinding {...}, startArrowhead null, endArrowhead "arrow"
 
-Layout principles:
-- Pick the right pattern: fan-out (1→many), convergence (many→1), assembly line (linear), tree (hierarchy), cycle (loop)
-- Use evidence: under each box, add a 1-2 line free-floating text describing what actually happens (real tool names, real outputs, not abstract labels)
-- Whitespace = importance. Hero elements get more space.
-- Lowercase everything in labels for natural feel
+Top-level: {"type":"excalidraw","version":2,"source":"https://excalidraw.com","elements":[...],"appState":{"viewBackgroundColor":"#14141c","gridSize":20},"files":{}}
 
-Critical JSON requirements:
-- Top-level: { "type": "excalidraw", "version": 2, "source": "https://excalidraw.com", "elements": [...], "appState": { "viewBackgroundColor": "#14141c", "gridSize": 20 }, "files": {} }
-- Every element needs: id, type, x, y, width, height, strokeColor, backgroundColor, fillStyle, strokeWidth, strokeStyle, roughness, opacity, angle, seed, version, versionNonce, isDeleted, groupIds, boundElements, link, locked
-- Text elements ALSO need: text, originalText, fontSize, fontFamily, textAlign, verticalAlign, containerId, lineHeight
-- Rectangles ALSO need: roundness
-- Arrows need: points, startBinding, endBinding, startArrowhead, endArrowhead
-- For text inside a rectangle: rectangle's boundElements lists the text id, text's containerId references the rectangle id
-
-Canvas size hint: design within {{CANVAS_WIDTH}}×{{CANVAS_HEIGHT}}px. Place elements with positive coordinates inside this canvas.
-
-Be FAITHFUL to the brief. Don't invent steps the user didn't mention.
-
-Output ONLY by calling the create_excalidraw_diagram tool. No prose.`;
+Design within {{CANVAS_WIDTH}}×{{CANVAS_HEIGHT}}px. Be faithful to the brief — don't invent steps. Output ONLY by calling the tool.`;
 
 const TOOL = {
   name: "create_excalidraw_diagram",
@@ -143,7 +124,7 @@ export async function POST(req: NextRequest) {
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 16384,
+      max_tokens: 6000,
       system,
       tools: [TOOL],
       tool_choice: { type: "tool", name: "create_excalidraw_diagram" },

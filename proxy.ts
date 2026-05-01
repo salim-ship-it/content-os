@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/reset", "/api/lead-magnets"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/auth/callback",
+  "/auth/reset",
+  "/api/lead-magnets",
+  // Inngest cloud calls /api/inngest server-to-server (signed by INNGEST_SIGNING_KEY)
+  // — must bypass user-session auth or the SDK can't register / invoke functions.
+  "/api/inngest",
+];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;

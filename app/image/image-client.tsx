@@ -11,6 +11,37 @@ type ExcalidrawScene = {
   files?: Record<string, unknown>;
 };
 
+// Polls the status endpoint every 2.5s until the job finishes (or the safety
+// cap is hit). Returns the parsed Excalidraw scene.
+async function pollForScene(jobId: string): Promise<ExcalidrawScene> {
+  const POLL_MS = 2500;
+  const MAX_WAIT_MS = 5 * 60 * 1000;
+  const started = Date.now();
+
+  while (Date.now() - started < MAX_WAIT_MS) {
+    await new Promise((r) => setTimeout(r, POLL_MS));
+    const res = await fetch(`/api/image/excalidraw/status/${jobId}`);
+    if (!res.ok) {
+      const err = await res
+        .json()
+        .catch(() => ({ error: `HTTP ${res.status}` }));
+      throw new Error(err.error || `Status check failed: ${res.status}`);
+    }
+    const data = (await res.json()) as {
+      status: "pending" | "complete" | "error";
+      scene: ExcalidrawScene | null;
+      error: string | null;
+    };
+    if (data.status === "error") {
+      throw new Error(data.error ?? "Generation failed");
+    }
+    if (data.status === "complete" && data.scene) {
+      return data.scene;
+    }
+  }
+  throw new Error("Timed out after 5 minutes — try again with a simpler brief.");
+}
+
 // Dynamic import keeps the ~2MB Excalidraw bundle out of the SSR / initial
 // page weight — only loads the first time a user actually generates a diagram.
 async function renderExcalidrawToPngUrl(scene: ExcalidrawScene): Promise<string> {
@@ -49,17 +80,25 @@ export function ImageClient() {
     setElapsed(null);
     const t0 = Date.now();
     try {
-      const res = await fetch("/api/image/excalidraw", {
+      // Step 1 — kick off the background job.
+      const startRes = await fetch("/api/image/excalidraw/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ brief: text, format }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-        throw new Error(err.error || `Server returned ${res.status}`);
+      if (!startRes.ok) {
+        const err = await startRes
+          .json()
+          .catch(() => ({ error: `HTTP ${startRes.status}` }));
+        throw new Error(err.error || `Server returned ${startRes.status}`);
       }
-      const data = (await res.json()) as { scene: ExcalidrawScene };
-      const url = await renderExcalidrawToPngUrl(data.scene);
+      const { jobId } = (await startRes.json()) as { jobId: string };
+
+      // Step 2 — poll until done (or 5-minute safety cap).
+      const scene = await pollForScene(jobId);
+
+      // Step 3 — render to PNG client-side.
+      const url = await renderExcalidrawToPngUrl(scene);
       setPngUrl(url);
       setElapsed(Date.now() - t0);
     } catch (e) {

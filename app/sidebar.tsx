@@ -27,7 +27,14 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Hide sidebar on login page
+  useEffect(() => {
+    setMounted(true);
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved === "true") setCollapsed(true);
+    } catch {}
+  }, []);
+
   if (pathname === "/login") return null;
 
   async function handleSignOut() {
@@ -36,14 +43,6 @@ export function Sidebar() {
     router.push("/login");
     router.refresh();
   }
-
-  useEffect(() => {
-    setMounted(true);
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === "true") setCollapsed(true);
-    } catch {}
-  }, []);
 
   function toggle() {
     const next = !collapsed;

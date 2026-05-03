@@ -117,17 +117,3 @@ export const MAX_CREATORS_PER_USER = 4;
 export function findIndustry(id: string): Industry | undefined {
   return INDUSTRIES.find((i) => i.id === id);
 }
-
-const PHOTO_BY_NAME: Record<string, string> = (() => {
-  const map: Record<string, string> = {};
-  for (const industry of INDUSTRIES) {
-    for (const c of industry.creators) {
-      if (c.image && !map[c.name]) map[c.name] = c.image;
-    }
-  }
-  return map;
-})();
-
-export function getCreatorPhoto(name: string): string | undefined {
-  return PHOTO_BY_NAME[name];
-}

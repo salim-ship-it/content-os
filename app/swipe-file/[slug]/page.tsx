@@ -3,7 +3,6 @@ import { readWinningPosts } from "@/lib/winning-posts";
 import { slugifyCreator, analyzeCreator } from "@/lib/creator-analysis";
 import { readInsightsCache } from "@/lib/creator-insights";
 import { readCreatorProfile } from "@/lib/creator-profiles";
-import { getCreatorPhoto } from "@/lib/recommended-creators";
 import { requireUser } from "@/lib/auth";
 import { CreatorDashboard } from "./creator-dashboard";
 
@@ -35,7 +34,7 @@ export default async function CreatorDashboardPage({
       stats={stats}
       posts={creatorPosts}
       initialInsights={cachedInsights}
-      profileImageUrl={profile?.image_url || getCreatorPhoto(creator) || ""}
+      profileImageUrl={profile?.image_url || ""}
       headline={profile?.headline || ""}
     />
   );

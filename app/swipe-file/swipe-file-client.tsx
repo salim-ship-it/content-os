@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { WinningPost } from "@/lib/winning-posts";
 import { slugifyCreator } from "@/lib/creator-analysis";
+import { getCreatorPhoto } from "@/lib/recommended-creators";
 
 type CreatorSummary = {
   creator: string;
@@ -49,6 +50,18 @@ function summarizeCreators(posts: WinningPost[]): CreatorSummary[] {
 }
 
 function CoverPlaceholder({ creator }: { creator: string }) {
+  const photo = getCreatorPhoto(creator);
+  if (photo) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={photo}
+        alt={creator}
+        loading="lazy"
+        className="w-full h-full object-cover"
+      />
+    );
+  }
   const letter = (creator || "?").charAt(0).toUpperCase();
   return (
     <div

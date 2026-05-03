@@ -226,6 +226,23 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
               </button>
             );
           })}
+          <span
+            className="text-xs px-3 py-2 rounded-full inline-flex items-center gap-1.5 cursor-not-allowed"
+            style={{
+              border: "1px dashed var(--vl-border)",
+              color: "var(--vl-text-muted)",
+              opacity: 0.7,
+            }}
+            title="We're adding more industries and creators soon."
+          >
+            More industries & creators
+            <span
+              className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded"
+              style={{ color: "var(--vl-accent)", background: "var(--vl-accent-glow)" }}
+            >
+              Soon
+            </span>
+          </span>
         </div>
 
         {industry && (

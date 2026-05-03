@@ -1,14 +1,34 @@
+import { promises as fs } from "fs";
+import path from "path";
 import { getSupabase } from "./supabase";
 
 const BUCKET = "post-images";
-const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+
+let _supabaseUrl: string | null = null;
+async function getSupabaseUrl(): Promise<string> {
+  if (_supabaseUrl) return _supabaseUrl;
+  const fromEnv =
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  if (fromEnv) return (_supabaseUrl = fromEnv);
+  try {
+    const envPath = path.resolve(process.cwd(), ".env.local");
+    const content = await fs.readFile(envPath, "utf-8");
+    for (const line of content.split("\n")) {
+      if (line.startsWith("SUPABASE_URL=")) {
+        return (_supabaseUrl = line.split("=", 2)[1].trim().replace(/^['"]|['"]$/g, ""));
+      }
+    }
+  } catch { /* ignore */ }
+  throw new Error("SUPABASE_URL not configured");
+}
 
 export type ArchiveResult =
   | { ok: true; permanentUrl: string }
   | { ok: false; error: string; expired?: boolean };
 
-function publicUrl(path: string): string {
-  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+async function publicUrl(filePath: string): Promise<string> {
+  const base = await getSupabaseUrl();
+  return `${base}/storage/v1/object/public/${BUCKET}/${filePath}`;
 }
 
 function extFromContentType(ct: string | null): string {
@@ -66,7 +86,7 @@ export async function archiveImageUrl(
     });
   if (error) return { ok: false, error: `upload: ${error.message}` };
 
-  return { ok: true, permanentUrl: publicUrl(path) };
+  return { ok: true, permanentUrl: await publicUrl(path) };
 }
 
 type RowToArchive = { id: string; image_url: string };

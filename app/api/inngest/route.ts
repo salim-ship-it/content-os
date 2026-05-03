@@ -1,6 +1,6 @@
 import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest";
-import { generateExcalidraw } from "@/inngest/functions";
+import { generateExcalidraw, archivePostImages } from "@/inngest/functions";
 
 // Inngest's webhook handler — Inngest cloud calls this URL to invoke the
 // registered functions. The integration sets INNGEST_SIGNING_KEY in env so
@@ -9,5 +9,5 @@ export const runtime = "nodejs";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [generateExcalidraw],
+  functions: [generateExcalidraw, archivePostImages],
 });

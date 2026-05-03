@@ -198,3 +198,23 @@ export const generateExcalidraw = inngest.createFunction(
     return { ok: true, jobId };
   }
 );
+
+// Sweep content_posts every 5 minutes for any image_url still pointing to
+// LinkedIn's signed CDN (which expires in ~3 weeks). Download the bytes,
+// upload to Supabase Storage, and rewrite image_url to a permanent URL.
+// Already-expired LinkedIn URLs are cleared so the UI stops trying to load them.
+import { archivePendingPosts } from "@/lib/post-image-archive";
+
+export const archivePostImages = inngest.createFunction(
+  {
+    id: "archive-post-images",
+    retries: 0,
+  },
+  { cron: "*/5 * * * *" },
+  async ({ step }) => {
+    const result = await step.run("archive-batch", async () => {
+      return archivePendingPosts({ batchSize: 50 });
+    });
+    return result;
+  }
+);

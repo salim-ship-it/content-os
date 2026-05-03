@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import type { WinningPost } from "@/lib/winning-posts";
 import type { CreatorStats } from "@/lib/creator-analysis";
 import type { CreatorInsightsCache } from "@/lib/creator-insights";
+import { getCreatorPhoto } from "@/lib/recommended-creators";
 
 type TabKey = "overview" | "posts" | "keywords" | "patterns" | "insights";
 const TABS: { key: TabKey; label: string }[] = [
@@ -1362,12 +1363,28 @@ function PostCard({ post }: { post: WinningPost }) {
                 "linear-gradient(135deg, var(--vl-accent-glow) 0%, rgba(249,115,22,0.04) 100%)",
             }}
           >
-            <span
-              className="text-6xl font-black select-none"
-              style={{ color: "rgba(249,115,22,0.25)" }}
-            >
-              {(post.creator || "?").charAt(0).toUpperCase()}
-            </span>
+            {getCreatorPhoto(post.creator) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={getCreatorPhoto(post.creator)!}
+                alt={post.creator}
+                loading="lazy"
+                className="rounded-full object-cover"
+                style={{
+                  width: 88,
+                  height: 88,
+                  border: "3px solid #fff",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                }}
+              />
+            ) : (
+              <span
+                className="text-6xl font-black select-none"
+                style={{ color: "rgba(249,115,22,0.25)" }}
+              >
+                {(post.creator || "?").charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
         </div>
       </div>

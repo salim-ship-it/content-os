@@ -74,6 +74,7 @@ export const INDUSTRIES: Industry[] = [
       { name: "Eddie Shleyner", url: "https://www.linkedin.com/in/eshleyner/", image: "/creators/eshleyner.jpg" },
       { name: "Daniel Murray", url: "https://www.linkedin.com/in/daniel-murray-marketing/", image: "/creators/daniel-murray-marketing.jpg" },
       { name: "Joey Yak", url: "https://www.linkedin.com/in/joeyyak/", image: "/creators/joeyyak.jpg" },
+      { name: "Mahdi Shafiei", url: "https://www.linkedin.com/in/mahdi-shafiei-trifidmedia/", image: "/creators/mahdi-shafiei-trifidmedia.jpg" },
     ],
   },
   {

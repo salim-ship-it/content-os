@@ -411,3 +411,113 @@ export const scrapeCreatorPosts = inngest.createFunction(
     return { creator: creatorName, ...summary };
   }
 );
+
+// Reddit scrape — uses the free public Reddit JSON API (no auth, no key).
+// Fired when /api/sources POST adds a `kind: "reddit"` row.
+const REDDIT_USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
+const REDDIT_WINNER_COMMENTS = 50;
+const REDDIT_WINNER_UPVOTES = 200;
+
+type RedditPost = {
+  title?: string;
+  selftext?: string;
+  permalink?: string;
+  author?: string;
+  score?: number;
+  num_comments?: number;
+  created_utc?: number;
+  link_flair_text?: string;
+};
+
+function classifyRedditPost(p: RedditPost): string {
+  const text = `${p.title || ""}\n${p.selftext || ""}`.toLowerCase();
+  if (/\bhow to\b|\bguide\b|\btutorial\b|\bsteps\b|^\d+\s/.test(text)) return "educational";
+  if (/\bmistake\b|\bwrong\b|\bbroken\b|\bnobody\b|\beveryone\b/.test(text)) return "hot take";
+  if (/\bi (built|made|launched|started|got|spent)\b|\bmy story\b|\byears ago\b/.test(text)) return "story";
+  if (/\bcase study\b|\bbreakdown\b|\bteardown\b|\baudit\b/.test(text)) return "case study";
+  return "engagement";
+}
+
+export const scrapeRedditPosts = inngest.createFunction(
+  {
+    id: "scrape-reddit-posts",
+    retries: 2,
+    triggers: [{ event: "reddit/added" }],
+  },
+  async ({ event, step }) => {
+    const { subredditName, time = "week", limit = 25 } = event.data as {
+      subredditName: string;
+      time?: "day" | "week" | "month" | "year" | "all";
+      limit?: number;
+    };
+    const sub = (subredditName || "").replace(/^r\//i, "").trim();
+    if (!sub) return { error: "no subreddit name" };
+
+    const posts = await step.run("fetch-subreddit", async () => {
+      const url = `https://www.reddit.com/r/${sub}/top.json?t=${time}&limit=${limit}`;
+      const res = await fetch(url, { headers: { "User-Agent": REDDIT_USER_AGENT } });
+      if (!res.ok) throw new Error(`reddit ${res.status}: ${res.statusText}`);
+      const json = (await res.json()) as { data?: { children?: { data?: RedditPost }[] } };
+      return (json?.data?.children || []).map((c) => c.data || {});
+    });
+
+    const summary = await step.run("upsert-posts", async () => {
+      const supabase = await getSupabase();
+      const creatorPrefix = `r/${sub}`;
+      const { data: existingRows } = await supabase
+        .from("content_posts")
+        .select("link")
+        .eq("source", "reddit")
+        .ilike("creator", `${creatorPrefix}%`);
+      const existingLinks = new Set(
+        (existingRows ?? []).map((r) => (r as { link: string }).link)
+      );
+
+      let inserted = 0;
+      let skipped = 0;
+
+      for (const p of posts) {
+        const winners =
+          (p.num_comments || 0) >= REDDIT_WINNER_COMMENTS ||
+          (p.score || 0) >= REDDIT_WINNER_UPVOTES;
+        if (!winners) { skipped++; continue; }
+
+        const link = p.permalink ? `https://www.reddit.com${p.permalink}` : "";
+        if (!link) { skipped++; continue; }
+        if (existingLinks.has(link)) { skipped++; continue; }
+
+        const date = p.created_utc
+          ? new Date(p.created_utc * 1000).toISOString().slice(0, 10)
+          : "";
+        const author = p.author ? `u/${p.author}` : "unknown";
+        const content = `${p.title || ""}\n${p.selftext || ""}`.trim();
+        const title = (p.title || "").slice(0, 500);
+
+        const row = {
+          source: "reddit",
+          type: classifyRedditPost(p),
+          title,
+          creator: `${creatorPrefix} (${author})`,
+          date,
+          likes: p.score || 0,
+          comments: p.num_comments || 0,
+          reposts: 0,
+          topic: p.link_flair_text || "",
+          why_it_worked: "",
+          link,
+          content,
+          image_url: "",
+          author_image_url: "",
+        };
+
+        const { error } = await supabase.from("content_posts").insert(row);
+        if (error) { console.error(`reddit insert: ${error.message}`); skipped++; }
+        else inserted++;
+      }
+      return { inserted, skipped, total: posts.length };
+    });
+
+    return { subreddit: `r/${sub}`, ...summary };
+  }
+);

@@ -4,6 +4,7 @@ import {
   generateExcalidraw,
   archivePostImages,
   scrapeCreatorPosts,
+  scrapeRedditPosts,
 } from "@/inngest/functions";
 
 // Inngest's webhook handler — Inngest cloud calls this URL to invoke the
@@ -13,5 +14,5 @@ export const runtime = "nodejs";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [generateExcalidraw, archivePostImages, scrapeCreatorPosts],
+  functions: [generateExcalidraw, archivePostImages, scrapeCreatorPosts, scrapeRedditPosts],
 });

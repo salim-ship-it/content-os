@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { readWinningPosts } from "@/lib/winning-posts";
+import { readSources } from "@/lib/sources";
 import { slugifyCreator, analyzeCreator } from "@/lib/creator-analysis";
 import { readInsightsCache } from "@/lib/creator-insights";
 import { readCreatorProfile } from "@/lib/creator-profiles";
@@ -15,7 +16,19 @@ export default async function CreatorDashboardPage({
 }) {
   const userId = await requireUser();
   const { slug } = await params;
-  const allPosts = await readWinningPosts();
+
+  const [allPosts, sources] = await Promise.all([
+    readWinningPosts(),
+    readSources(userId),
+  ]);
+
+  // Gate: this user must have added a LinkedIn creator whose name matches the
+  // requested slug. Otherwise they can't view the dashboard.
+  const userOwnsCreator = sources
+    .filter((s) => s.kind === "linkedin")
+    .some((s) => slugifyCreator(s.name) === slug);
+  if (!userOwnsCreator) notFound();
+
   const creatorPosts = allPosts.filter(
     (p) => p.source === "linkedin" && slugifyCreator(p.creator) === slug,
   );

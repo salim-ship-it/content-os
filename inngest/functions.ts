@@ -310,12 +310,23 @@ export const scrapeCreatorPosts = inngest.createFunction(
       return (await res.json()) as ApifyPost[];
     });
 
-    // Step 4: filter to this creator's own posts and upsert into content_posts
+    // Step 4: filter to this creator's own posts and insert any that aren't
+    // already in the DB (de-duped by `link`). The `id` column is UUID-typed
+    // and auto-generated, so we don't set it.
     const summary = await step.run("upsert-posts", async () => {
       const supabase = await getSupabase();
       const expectedSlug = creatorUrl.match(/\/in\/([^/?]+)/)?.[1] ?? "";
+
+      // Pre-fetch existing links for this creator so we can skip duplicates.
+      const { data: existingRows } = await supabase
+        .from("content_posts")
+        .select("link")
+        .eq("creator", creatorName);
+      const existingLinks = new Set(
+        (existingRows ?? []).map((r) => (r as { link: string }).link)
+      );
+
       let inserted = 0;
-      let updated = 0;
       let skipped = 0;
 
       for (const p of items) {
@@ -325,8 +336,11 @@ export const scrapeCreatorPosts = inngest.createFunction(
           continue;
         }
         const link = p.linkedinUrl || "";
-        const entityId = p.entityId || "";
-        if (!link || !entityId) {
+        if (!link) {
+          skipped++;
+          continue;
+        }
+        if (existingLinks.has(link)) {
           skipped++;
           continue;
         }
@@ -337,11 +351,7 @@ export const scrapeCreatorPosts = inngest.createFunction(
         const content = p.content || "";
         const title = content.split("\n")[0]?.slice(0, 200) || "";
 
-        // Use the LinkedIn entity ID embedded in a stable namespace as primary
-        // key. Upsert keeps things idempotent.
-        const id = `linkedin-${entityId}`;
         const row = {
-          id,
           source: "linkedin",
           type: "engagement",
           title,
@@ -357,19 +367,15 @@ export const scrapeCreatorPosts = inngest.createFunction(
           image_url: imageUrl,
         };
 
-        const { error, status } = await supabase
-          .from("content_posts")
-          .upsert(row, { onConflict: "id" });
+        const { error } = await supabase.from("content_posts").insert(row);
         if (error) {
-          console.error(`upsert ${id}: ${error.message}`);
+          console.error(`insert: ${error.message}`);
           skipped++;
-        } else if (status === 201) {
-          inserted++;
         } else {
-          updated++;
+          inserted++;
         }
       }
-      return { inserted, updated, skipped, totalItems: items.length };
+      return { inserted, skipped, totalItems: items.length };
     });
 
     return { creator: creatorName, ...summary };

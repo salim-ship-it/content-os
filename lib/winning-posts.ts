@@ -18,6 +18,7 @@ export type WinningPost = {
   link: string;
   content: string;
   imageUrl: string;
+  authorImageUrl: string;
 };
 
 export async function readWinningPosts(): Promise<WinningPost[]> {
@@ -46,5 +47,6 @@ export async function readWinningPosts(): Promise<WinningPost[]> {
     link: String(row.link || ""),
     content: String(row.content || ""),
     imageUrl: String(row.image_url || ""),
+    authorImageUrl: String(row.author_image_url || ""),
   }));
 }

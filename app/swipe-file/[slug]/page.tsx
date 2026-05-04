@@ -40,6 +40,12 @@ export default async function CreatorDashboardPage({
   const cachedInsights = await readInsightsCache(slug);
   const profile = await readCreatorProfile(userId, slug);
 
+  // Derive avatar from the most recent post that has one. LinkedIn signs URLs
+  // with an expiry, so prefer newer posts. Fall back to per-user profile cache.
+  const avatarFromPosts = [...creatorPosts]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .find((p) => p.authorImageUrl)?.authorImageUrl;
+
   return (
     <CreatorDashboard
       creator={creator}
@@ -47,7 +53,7 @@ export default async function CreatorDashboardPage({
       stats={stats}
       posts={creatorPosts}
       initialInsights={cachedInsights}
-      profileImageUrl={profile?.image_url || ""}
+      profileImageUrl={avatarFromPosts || profile?.image_url || ""}
       headline={profile?.headline || ""}
     />
   );

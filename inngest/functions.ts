@@ -246,8 +246,37 @@ type ApifyPost = {
   postedAt?: { date?: string; timestamp?: number };
   postImages?: Array<{ url?: string }>;
   engagement?: { likes?: number; comments?: number; shares?: number };
-  author?: { name?: string; publicIdentifier?: string };
+  author?: {
+    name?: string;
+    publicIdentifier?: string;
+    avatar?: string | { url?: string };
+    profilePictureUrl?: string;
+    profileImageUrl?: string;
+    pictureUrl?: string;
+    picture?: string | { url?: string };
+    image?: string | { url?: string };
+    imageUrl?: string;
+    photoUrl?: string;
+    photo?: string | { url?: string };
+    profilePicture?: string | { url?: string };
+  };
 };
+
+function pickAuthorImage(p: ApifyPost): string {
+  const a = p.author || {};
+  const candidates: Array<unknown> = [
+    a.avatar, a.profilePictureUrl, a.profileImageUrl, a.pictureUrl,
+    a.picture, a.image, a.imageUrl, a.photoUrl, a.photo, a.profilePicture,
+  ];
+  for (const c of candidates) {
+    if (typeof c === "string" && /^https?:\/\//.test(c)) return c;
+    if (c && typeof c === "object") {
+      const url = (c as { url?: string }).url;
+      if (typeof url === "string" && /^https?:\/\//.test(url)) return url;
+    }
+  }
+  return "";
+}
 
 export const scrapeCreatorPosts = inngest.createFunction(
   {
@@ -365,6 +394,7 @@ export const scrapeCreatorPosts = inngest.createFunction(
           link,
           content,
           image_url: imageUrl,
+          author_image_url: pickAuthorImage(p),
         };
 
         const { error } = await supabase.from("content_posts").insert(row);

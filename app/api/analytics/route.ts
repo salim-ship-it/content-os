@@ -3,11 +3,12 @@ import { getSupabase } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth";
 
 export async function GET() {
-  await requireUser();
+  const userId = await requireUser();
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from("published_posts")
     .select("*")
+    .eq("user_id", userId)
     .order("published_date", { ascending: false })
     .limit(500);
 
@@ -16,11 +17,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  await requireUser();
+  const userId = await requireUser();
   const body = await request.json();
   const supabase = await getSupabase();
 
   const row = {
+    user_id: userId,
     title: body.title,
     content: body.content || null,
     published_date: body.published_date,
@@ -48,7 +50,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  await requireUser();
+  const userId = await requireUser();
   const body = await request.json();
   if (!body.id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
@@ -59,7 +61,8 @@ export async function PATCH(request: Request) {
   const { error } = await (supabase as any)
     .from("published_posts")
     .update(updates)
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", userId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

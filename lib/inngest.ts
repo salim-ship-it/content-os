@@ -14,4 +14,12 @@ export type Events = {
       format: string;
     };
   };
+  "creator/added": {
+    data: {
+      userId: string;
+      creatorUrl: string;
+      creatorName: string;
+      maxPosts: number;
+    };
+  };
 };

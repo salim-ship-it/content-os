@@ -6,6 +6,9 @@ import type { Industry, RecommendedCreator } from "@/lib/recommended-creators";
 
 type Step = "level" | "pick" | "paste";
 
+const POST_COUNT_OPTIONS = [10, 20, 50, 100] as const;
+const DEFAULT_POST_COUNT = 20;
+
 type Props = {
   industries: Industry[];
   maxCreators: number;
@@ -71,6 +74,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
   const [activeIndustry, setActiveIndustry] = useState<string>(industries[0]?.id ?? "");
   const [selected, setSelected] = useState<SelectedCreator[]>([]);
   const [pasteRows, setPasteRows] = useState<string[]>(["", "", "", ""]);
+  const [postsPerCreator, setPostsPerCreator] = useState<number>(DEFAULT_POST_COUNT);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -137,7 +141,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
       const res = await fetch("/api/onboarding/creators", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ creators }),
+        body: JSON.stringify({ creators, postsPerCreator }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -312,6 +316,8 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
           })}
         </div>
 
+        <PostCountSelector value={postsPerCreator} onChange={setPostsPerCreator} />
+
         {error && (
           <p className="mt-4 text-sm" style={{ color: "#dc2626" }}>
             {error}
@@ -354,6 +360,8 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
         ))}
       </div>
 
+      <PostCountSelector value={postsPerCreator} onChange={setPostsPerCreator} />
+
       {error && (
         <p className="mt-4 text-sm" style={{ color: "#dc2626" }}>
           {error}
@@ -367,6 +375,48 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
         nextDisabled={submitting}
       />
     </Shell>
+  );
+}
+
+function PostCountSelector({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <div className="mt-8">
+      <div
+        className="text-[11px] uppercase tracking-[0.2em] mb-2"
+        style={{ color: "var(--vl-text-muted)" }}
+      >
+        Posts to scrape per creator
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {POST_COUNT_OPTIONS.map((n) => {
+          const active = n === value;
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(n)}
+              className="text-xs px-4 py-2 rounded-full transition-colors"
+              style={{
+                border: `1px solid ${active ? "var(--vl-accent)" : "var(--vl-border)"}`,
+                background: active ? "var(--vl-accent-glow)" : "transparent",
+                color: active ? "var(--vl-accent)" : "var(--vl-text-heading)",
+              }}
+            >
+              {n} posts
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs mt-2" style={{ color: "var(--vl-text-muted)" }}>
+        We'll start scraping right after you continue. New posts arrive 1× per day after that.
+      </p>
+    </div>
   );
 }
 

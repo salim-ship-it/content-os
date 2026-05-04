@@ -209,12 +209,169 @@ export const archivePostImages = inngest.createFunction(
   {
     id: "archive-post-images",
     retries: 0,
+    triggers: [{ cron: "*/5 * * * *" }],
   },
-  { cron: "*/5 * * * *" },
   async ({ step }) => {
     const result = await step.run("archive-batch", async () => {
       return archivePendingPosts({ batchSize: 50 });
     });
     return result;
+  }
+);
+
+// When a user adds a creator during onboarding, kick off an Apify scrape for
+// that creator's last N posts. Posts get inserted into content_posts with the
+// LinkedIn signed URL — the archiver cron then converts those URLs to
+// permanent Supabase Storage URLs within 5 minutes.
+async function getEnv(key: string): Promise<string> {
+  if (process.env[key]) return process.env[key]!;
+  try {
+    const envPath = path.resolve(process.cwd(), ".env.local");
+    const content = await fs.readFile(envPath, "utf-8");
+    for (const line of content.split("\n")) {
+      if (line.startsWith(`${key}=`)) {
+        return line.split("=", 2)[1].trim().replace(/^['"]|['"]$/g, "");
+      }
+    }
+  } catch { /* ignore */ }
+  throw new Error(`Missing env var: ${key}`);
+}
+
+const APIFY_ACTOR = "harvestapi~linkedin-profile-posts";
+
+type ApifyPost = {
+  entityId?: string;
+  linkedinUrl?: string;
+  content?: string;
+  postedAt?: { date?: string; timestamp?: number };
+  postImages?: Array<{ url?: string }>;
+  engagement?: { likes?: number; comments?: number; shares?: number };
+  author?: { name?: string; publicIdentifier?: string };
+};
+
+export const scrapeCreatorPosts = inngest.createFunction(
+  {
+    id: "scrape-creator-posts",
+    retries: 2,
+    triggers: [{ event: "creator/added" }],
+  },
+  async ({ event, step }) => {
+    const { creatorUrl, creatorName, maxPosts } = event.data;
+
+    // Step 1: kick off Apify run
+    const runId = await step.run("start-apify", async () => {
+      const token = await getEnv("APIFY_API_TOKEN");
+      const res = await fetch(
+        `https://api.apify.com/v2/acts/${APIFY_ACTOR}/runs?token=${token}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            targetUrls: [creatorUrl],
+            maxPosts,
+            postedLimit: "any",
+          }),
+        }
+      );
+      if (!res.ok) throw new Error(`apify run start: HTTP ${res.status}`);
+      const data = (await res.json()) as { data: { id: string; defaultDatasetId: string } };
+      return { id: data.data.id, datasetId: data.data.defaultDatasetId };
+    });
+
+    // Step 2: poll until done (max ~10 min)
+    const dataset = await step.run("wait-apify", async () => {
+      const token = await getEnv("APIFY_API_TOKEN");
+      const start = Date.now();
+      const timeoutMs = 10 * 60 * 1000;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const res = await fetch(
+          `https://api.apify.com/v2/actor-runs/${runId.id}?token=${token}`
+        );
+        if (!res.ok) throw new Error(`apify status: HTTP ${res.status}`);
+        const data = (await res.json()) as { data: { status: string } };
+        const status = data.data.status;
+        if (status === "SUCCEEDED") return runId.datasetId;
+        if (["FAILED", "ABORTED", "TIMING-OUT", "TIMED-OUT"].includes(status)) {
+          throw new Error(`apify run ${status}`);
+        }
+        if (Date.now() - start > timeoutMs) throw new Error("apify run timeout");
+        await new Promise((r) => setTimeout(r, 8000));
+      }
+    });
+
+    // Step 3: fetch dataset items
+    const items = await step.run("fetch-dataset", async () => {
+      const token = await getEnv("APIFY_API_TOKEN");
+      const res = await fetch(
+        `https://api.apify.com/v2/datasets/${dataset}/items?token=${token}`
+      );
+      if (!res.ok) throw new Error(`apify dataset: HTTP ${res.status}`);
+      return (await res.json()) as ApifyPost[];
+    });
+
+    // Step 4: filter to this creator's own posts and upsert into content_posts
+    const summary = await step.run("upsert-posts", async () => {
+      const supabase = await getSupabase();
+      const expectedSlug = creatorUrl.match(/\/in\/([^/?]+)/)?.[1] ?? "";
+      let inserted = 0;
+      let updated = 0;
+      let skipped = 0;
+
+      for (const p of items) {
+        const authorSlug = (p.author?.publicIdentifier || "").toLowerCase();
+        if (authorSlug && expectedSlug.toLowerCase() !== authorSlug) {
+          skipped++;
+          continue;
+        }
+        const link = p.linkedinUrl || "";
+        const entityId = p.entityId || "";
+        if (!link || !entityId) {
+          skipped++;
+          continue;
+        }
+
+        const dateRaw = p.postedAt?.date || "";
+        const date = dateRaw ? dateRaw.slice(0, 10) : "";
+        const imageUrl = p.postImages?.[0]?.url || "";
+        const content = p.content || "";
+        const title = content.split("\n")[0]?.slice(0, 200) || "";
+
+        // Use the LinkedIn entity ID embedded in a stable namespace as primary
+        // key. Upsert keeps things idempotent.
+        const id = `linkedin-${entityId}`;
+        const row = {
+          id,
+          source: "linkedin",
+          type: "engagement",
+          title,
+          creator: creatorName,
+          date,
+          likes: p.engagement?.likes ?? 0,
+          comments: p.engagement?.comments ?? 0,
+          reposts: p.engagement?.shares ?? 0,
+          topic: "",
+          why_it_worked: "",
+          link,
+          content,
+          image_url: imageUrl,
+        };
+
+        const { error, status } = await supabase
+          .from("content_posts")
+          .upsert(row, { onConflict: "id" });
+        if (error) {
+          console.error(`upsert ${id}: ${error.message}`);
+          skipped++;
+        } else if (status === 201) {
+          inserted++;
+        } else {
+          updated++;
+        }
+      }
+      return { inserted, updated, skipped, totalItems: items.length };
+    });
+
+    return { creator: creatorName, ...summary };
   }
 );

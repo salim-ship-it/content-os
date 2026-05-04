@@ -15,7 +15,6 @@ const NAV: NavItem[] = [
   { href: "/lead-magnets", label: "Lead Magnets" },
   { href: "/image", label: "Image" },
   { href: "/preview", label: "Preview" },
-  { href: "/analytics", label: "Analytics" },
   { href: "/learn", label: "Learn" },
 ];
 

@@ -120,6 +120,6 @@ export const VOICE_QUESTIONS: VoiceQuestion[] = [
     id: "coffee-baseline",
     type: "long-text",
     question:
-      "You're at a coffee with another GTM person. They ask what you've been working on. What do you say — in your own words, the way you'd actually say it?",
+      "You're at a coffee with someone who gets your world. They ask what you've been working on. Answer the way you'd actually say it — not how you'd pitch it.",
   },
 ];

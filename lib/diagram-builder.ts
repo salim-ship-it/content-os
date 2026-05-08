@@ -107,7 +107,8 @@ function buildFork(
 
   const BOX_W = Math.min(300, canvasW * 0.28);
   const BOX_H = 64;
-  const ROW_GAP = 100;
+  const SUBLABEL_H = 36; // height reserved for sublabel text below a box
+  const ROW_GAP = BOX_H + SUBLABEL_H + 36; // box + sublabel clearance + arrow gap
   const COL_GAP = canvasW * 0.06;
   const centerX = canvasW / 2;
 
@@ -158,7 +159,9 @@ function buildFork(
         elements.push(makeText(s.sublabel, leftCX, stepY + BOX_H + 16, 12, "#7a7580"));
       }
       if (i > 0) {
-        elements.push(makeArrow(leftCX, stepY - ROW_GAP + BOX_H, leftCX, stepY));
+        const prevHasSublabel = !!leftSteps[i - 1]?.sublabel;
+        const arrowFromY = stepY - ROW_GAP + BOX_H + (prevHasSublabel ? SUBLABEL_H : 8);
+        elements.push(makeArrow(leftCX, arrowFromY, leftCX, stepY));
       }
       leftBoxBottomYs.push(stepY + BOX_H);
     }
@@ -173,7 +176,9 @@ function buildFork(
         elements.push(makeText(s.sublabel, rightCX, stepY + BOX_H + 16, 12, "#7a7580"));
       }
       if (i > 0) {
-        elements.push(makeArrow(rightCX, stepY - ROW_GAP + BOX_H, rightCX, stepY));
+        const prevHasSublabel = !!rightSteps[i - 1]?.sublabel;
+        const arrowFromY = stepY - ROW_GAP + BOX_H + (prevHasSublabel ? SUBLABEL_H : 8);
+        elements.push(makeArrow(rightCX, arrowFromY, rightCX, stepY));
       }
       rightBoxBottomYs.push(stepY + BOX_H);
     }

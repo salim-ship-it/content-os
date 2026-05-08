@@ -17,6 +17,9 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
   const [activeTab, setActiveTab] = useState<SourceKind>("linkedin");
   const [restoring, setRestoring] = useState(false);
   const [restoreMsg, setRestoreMsg] = useState<string | null>(null);
+  const [rescanning, setRescanning] = useState(false);
+  const [rescanMsg, setRescanMsg] = useState<string | null>(null);
+  const [scrapeMsg, setScrapeMsg] = useState<string | null>(null);
 
   /* --- form state --- */
   const [name, setName] = useState("");
@@ -53,8 +56,28 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
   const filtered = useMemo(() => sources.filter((s) => s.kind === activeTab), [sources, activeTab]);
 
   /* --- CRUD --- */
+  async function handleRescan() {
+    if (rescanning) return;
+    setRescanning(true);
+    setRescanMsg(null);
+    try {
+      const res = await fetch("/api/sources/rescan", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setRescanMsg(`Rescan failed: ${data.error || res.status}`);
+      } else {
+        setRescanMsg(`Queued ${data.queued} source${data.queued !== 1 ? "s" : ""} — check Swipe File in ~5 min.`);
+      }
+    } catch {
+      setRescanMsg("Rescan failed. Try again.");
+    } finally {
+      setRescanning(false);
+    }
+  }
+
   async function handleAdd() {
     if (!name || !url) return;
+    setScrapeMsg(null);
     const res = await fetch("/api/sources", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -69,6 +92,9 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
     });
     const updated = await res.json();
     setSources(updated);
+    if (activeTab === "linkedin" && url) {
+      setScrapeMsg(`Scraping posts for "${name}" in background — check Swipe File in ~5 min.`);
+    }
     setName("");
     setUrl("");
     setNote("");
@@ -102,19 +128,34 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
         <h1 className="text-3xl font-bold" style={{ color: "var(--vl-text-heading)" }}>
           Sources
         </h1>
-        <button
-          onClick={handleRestore}
-          disabled={restoring}
-          className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-          style={{
-            background: "var(--vl-bg-card)",
-            color: "var(--vl-accent)",
-            border: "1px solid var(--vl-accent)",
-            opacity: restoring ? 0.6 : 1,
-          }}
-        >
-          {restoring ? "Restoring..." : "↻ Restore defaults"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRescan}
+            disabled={rescanning}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              background: "var(--vl-bg-card)",
+              color: "var(--vl-text-muted)",
+              border: "1px solid var(--vl-border)",
+              opacity: rescanning ? 0.6 : 1,
+            }}
+          >
+            {rescanning ? "Rescanning..." : "↻ Rescan all"}
+          </button>
+          <button
+            onClick={handleRestore}
+            disabled={restoring}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              background: "var(--vl-bg-card)",
+              color: "var(--vl-accent)",
+              border: "1px solid var(--vl-accent)",
+              opacity: restoring ? 0.6 : 1,
+            }}
+          >
+            {restoring ? "Restoring..." : "↻ Restore defaults"}
+          </button>
+        </div>
       </div>
       {restoreMsg && (
         <div
@@ -122,6 +163,22 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
           style={{ background: "var(--vl-accent-glow)", color: "var(--vl-accent)" }}
         >
           {restoreMsg}
+        </div>
+      )}
+      {rescanMsg && (
+        <div
+          className="mb-4 px-4 py-2 rounded-lg text-sm"
+          style={{ background: "var(--vl-accent-glow)", color: "var(--vl-accent)" }}
+        >
+          {rescanMsg}
+        </div>
+      )}
+      {scrapeMsg && (
+        <div
+          className="mb-4 px-4 py-2 rounded-lg text-sm"
+          style={{ background: "var(--vl-accent-glow)", color: "var(--vl-accent)" }}
+        >
+          {scrapeMsg}
         </div>
       )}
 

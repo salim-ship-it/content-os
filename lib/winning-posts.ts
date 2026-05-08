@@ -21,17 +21,8 @@ export type WinningPost = {
   authorImageUrl: string;
 };
 
-export async function readWinningPosts(): Promise<WinningPost[]> {
-  const supabase = await getSupabase();
-  const { data, error } = await supabase
-    .from("content_posts")
-    .select("*")
-    .order("likes", { ascending: false })
-    .limit(2000);
-
-  if (error) { console.error("Supabase error:", error.message); return []; }
-
-  return (data || []).map((row: Record<string, unknown>) => ({
+function mapPost(row: Record<string, unknown>): WinningPost {
+  return {
     id: String(row.id || ""),
     source: String(row.source || "linkedin") as SourceKind,
     type: String(row.type || "engagement"),
@@ -48,5 +39,34 @@ export async function readWinningPosts(): Promise<WinningPost[]> {
     content: String(row.content || ""),
     imageUrl: String(row.image_url || ""),
     authorImageUrl: String(row.author_image_url || ""),
-  }));
+  };
+}
+
+export async function readWinningPosts(): Promise<WinningPost[]> {
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("content_posts")
+    .select("*")
+    .order("likes", { ascending: false })
+    .limit(2000);
+
+  if (error) { console.error("Supabase error:", error.message); return []; }
+  return (data || []).map(mapPost);
+}
+
+// Fetch all LinkedIn posts for a specific set of creator names.
+// Used by the swipe file page so newly-added creators with low like counts
+// aren't cut off by the global 2000-post limit.
+export async function readPostsByCreators(creatorNames: string[]): Promise<WinningPost[]> {
+  if (creatorNames.length === 0) return [];
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from("content_posts")
+    .select("*")
+    .eq("source", "linkedin")
+    .in("creator", creatorNames)
+    .order("likes", { ascending: false });
+
+  if (error) { console.error("Supabase error:", error.message); return []; }
+  return (data || []).map(mapPost);
 }

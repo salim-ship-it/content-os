@@ -10,45 +10,55 @@ import path from "path";
 
 const SYSTEM_PROMPT = `You generate Excalidraw v2 scene JSON for hand-drawn LinkedIn diagrams.
 
+CRITICAL RULE — TEXT RENDERING:
+NEVER use containerId on text elements. NEVER add text ids to a rectangle's boundElements.
+ALL text must be free-floating (containerId: null, boundElements: []).
+To label a box, place a separate free-floating text element centred over it using the same x/y centre.
+Bound text is silently dropped by the renderer. Free-floating text always appears.
+
 Visual style (always apply):
 - Background: #14141c (dark mode)
-- Accent: Periwinkle #8182C1 (never generic blue or purple)
-- Font: fontFamily: 1 (Virgil, handwritten) for ALL text
-- Boxes: strokeStyle "dotted", roughness 2, roundness {"type":3}, strokeWidth 2
-- Arrows: strokeStyle "solid", roughness 1, periwinkle stroke
-- Titles: lowercase, free-floating text (no container), color #A3A4D8, fontSize 32-40
-- Subtitles: free-floating, color #7a7580, fontSize 16-18
-- Labels inside boxes: color #f0edee, fontSize 18-24, centered
-- Evidence/sub text under boxes: free-floating, color #7a7580, fontSize 13-15
+- Accent: Periwinkle #8182C1
+- Font: fontFamily 1 (Virgil) for ALL text
+- Boxes: strokeStyle "dotted", roughness 2, roundness {"type":3}, strokeWidth 2, backgroundColor "transparent", fillStyle "solid"
+- Arrows: strokeStyle "solid", roughness 1, strokeColor #8182C1, endArrowhead "arrow", startArrowhead null
+- Box label text: free-floating, centred over its box, color #f0edee, fontSize 20, textAlign "center", verticalAlign "middle"
+- Evidence text (under box): free-floating, color #7a7580, fontSize 13, textAlign "center"
+- Section title text: free-floating above column, color #A3A4D8, fontSize 28, textAlign "center"
+- All text lowercase
 
-Color semantics for box strokes:
-- Process steps: #8182C1 (periwinkle)
-- AI/agent steps: #A3A4D8 (lighter periwinkle)
-- Start/end success: #4ade80 (green)
-- Decision: #A3A4D8
-- Warning: #f87171
+Color semantics for box strokeColor:
+- Normal step: #8182C1
+- Warning/bad path: #f87171
+- Success/good path: #4ade80
+- Start/end: #4ade80
+
+Box sizing: width at least 260px, height at least 60px. Make boxes wide enough so the label fits on one line.
+Label positioning: place the text element at x = box.x + box.width/2, y = box.y + box.height/2. Use textAlign "center".
+
+JSON schema — every rectangle element needs exactly these fields:
+{ "id", "type":"rectangle", "x", "y", "width", "height", "strokeColor", "backgroundColor":"transparent", "fillStyle":"solid", "strokeWidth":2, "strokeStyle":"dotted", "roughness":2, "opacity":100, "angle":0, "seed", "version":1, "versionNonce":0, "isDeleted":false, "groupIds":[], "boundElements":[], "link":null, "locked":false, "roundness":{"type":3} }
+
+Every free-floating text element needs exactly:
+{ "id", "type":"text", "x", "y", "width", "height", "strokeColor":"transparent", "backgroundColor":"transparent", "fillStyle":"solid", "strokeWidth":1, "strokeStyle":"solid", "roughness":1, "opacity":100, "angle":0, "seed", "version":1, "versionNonce":0, "isDeleted":false, "groupIds":[], "boundElements":[], "link":null, "locked":false, "text", "originalText", "fontSize", "fontFamily":1, "textAlign", "verticalAlign":"middle", "containerId":null, "lineHeight":1.25, "roundness":null }
+
+Every arrow element needs:
+{ "id", "type":"arrow", "x", "y", "width", "height", "strokeColor":"#8182C1", "backgroundColor":"transparent", "fillStyle":"solid", "strokeWidth":2, "strokeStyle":"solid", "roughness":1, "opacity":100, "angle":0, "seed", "version":1, "versionNonce":0, "isDeleted":false, "groupIds":[], "boundElements":[], "link":null, "locked":false, "points":[[0,0],[dx,dy]], "startBinding":null, "endBinding":null, "startArrowhead":null, "endArrowhead":"arrow", "roundness":{"type":2} }
+
+Top-level scene:
+{ "type":"excalidraw", "version":2, "source":"https://excalidraw.com", "elements":[...], "appState":{"viewBackgroundColor":"#14141c","gridSize":20}, "files":{} }
+
+Canvas: lay out within {{CANVAS_WIDTH}}×{{CANVAS_HEIGHT}}px with all coordinates positive.
 
 Layout principles:
-- Pick the right pattern: fan-out (1→many), convergence (many→1), assembly line (linear), tree (hierarchy), cycle (loop)
-- Use evidence: under each box, add a 1-2 line free-floating text describing what actually happens (real tool names, real outputs, not abstract labels)
-- Use multi-zoom: a summary flow at one level + section boundaries + detail/evidence inside sections
-- Whitespace = importance. Hero elements get more space.
-- Lowercase everything in labels for natural feel
-- Size boxes generously so labels never overflow — width = max(120, label_chars * fontSize * 0.6)
+- Pick the right pattern: fork (1 splits into 2 paths), linear pipeline, hub-and-spoke, cycle
+- For a fork: start box at top centre, two columns below, converge at bottom centre
+- Space columns at least 120px apart so arrows don't overlap
+- Leave 80px vertical gap between boxes for arrows and evidence text
+- Evidence text sits 10px below its box
 
-Critical JSON requirements:
-- Top-level: { "type": "excalidraw", "version": 2, "source": "https://excalidraw.com", "elements": [...], "appState": { "viewBackgroundColor": "#14141c", "gridSize": 20 }, "files": {} }
-- Every element needs: id, type, x, y, width, height, strokeColor, backgroundColor, fillStyle, strokeWidth, strokeStyle, roughness, opacity, angle, seed, version, versionNonce, isDeleted, groupIds, boundElements, link, locked
-- Text elements ALSO need: text, originalText, fontSize, fontFamily, textAlign, verticalAlign, containerId, lineHeight
-- Rectangles ALSO need: roundness
-- Arrows need: points, startBinding, endBinding, startArrowhead, endArrowhead
-- For text inside a rectangle: rectangle's boundElements lists the text id, text's containerId references the rectangle id
-
-Canvas: design within {{CANVAS_WIDTH}}×{{CANVAS_HEIGHT}}px. Place elements with positive coordinates inside this canvas.
-
-Be FAITHFUL to the brief. Don't invent steps. Use real tool names from the brief verbatim.
-
-Output ONLY by calling the create_excalidraw_diagram tool. No prose.`;
+Be FAITHFUL to the brief. Use the exact labels from the brief verbatim.
+Output ONLY via the create_excalidraw_diagram tool. No prose.`;
 
 const TOOL = {
   name: "create_excalidraw_diagram",

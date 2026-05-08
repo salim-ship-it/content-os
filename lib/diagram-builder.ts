@@ -122,22 +122,21 @@ function buildFork(
   }
 
   const forkY = y + BOX_H;
-  y += BOX_H + 50;
+  y += BOX_H + 90;
 
   // Column X centres
   const leftCX = centerX - COL_GAP / 2 - BOX_W / 2;
   const rightCX = centerX + COL_GAP / 2 + BOX_W / 2;
 
-  // ── Column headings ──
-  elements.push(makeText(spec.left.heading, leftCX, y, 22, "#A3A4D8"));
-  elements.push(makeText(spec.right.heading, rightCX, y, 22, "#A3A4D8"));
-  y += 36;
-
-  // ── Fork arrows from start box ──
+  // ── Fork arrows from start box (land at y) ──
   const startCX = centerX;
-  const startBottomY = forkY;
-  elements.push(makeArrow(startCX, startBottomY, leftCX, y));
-  elements.push(makeArrow(startCX, startBottomY, rightCX, y));
+  elements.push(makeArrow(startCX, forkY, leftCX, y));
+  elements.push(makeArrow(startCX, forkY, rightCX, y));
+
+  // ── Column headings — placed BELOW arrow endpoints so they don't overlap ──
+  elements.push(makeText(spec.left.heading, leftCX, y + 22, 18, "#A3A4D8"));
+  elements.push(makeText(spec.right.heading, rightCX, y + 22, 18, "#A3A4D8"));
+  y += 52;
 
   // ── Steps ──
   const leftSteps = spec.left?.steps ?? [];

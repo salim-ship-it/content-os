@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 type Format = "1:1" | "4:5" | "9:16";
-type Mode = "post" | "brief";
 
 type ExcalidrawScene = {
   type?: string;
@@ -51,49 +50,50 @@ async function renderExcalidrawToPngUrl(scene: ExcalidrawScene): Promise<string>
 }
 
 export function ImageClient() {
-  const [mode, setMode] = useState<Mode>("post");
   const [post, setPost] = useState("");
   const [brief, setBrief] = useState("");
   const [format, setFormat] = useState<Format>("4:5");
-  const [loading, setLoading] = useState(false);
-  const [loadingStep, setLoadingStep] = useState<"analyzing" | "generating" | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pngUrl, setPngUrl] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState<number | null>(null);
 
-  async function generate() {
+  async function analyzePost() {
+    const postText = post.trim();
+    if (!postText) return;
+    setAnalyzing(true);
+    setError(null);
+    setBrief("");
+    setPngUrl(null);
+    try {
+      const res = await fetch("/api/image/analyze-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post: postText }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error || `Analysis failed: ${res.status}`);
+      }
+      const { brief: generatedBrief } = (await res.json()) as { brief: string };
+      setBrief(generatedBrief);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Analysis failed");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  async function generateDiagram() {
+    const finalBrief = brief.trim();
+    if (!finalBrief) return;
     const t0 = Date.now();
-    setLoading(true);
+    setGenerating(true);
     setError(null);
     setPngUrl(null);
     setElapsed(null);
-
     try {
-      let finalBrief = brief.trim();
-
-      if (mode === "post") {
-        const postText = post.trim();
-        if (!postText) return;
-
-        // Step 1: analyze the post → get a brief
-        setLoadingStep("analyzing");
-        const analyzeRes = await fetch("/api/image/analyze-post", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ post: postText }),
-        });
-        if (!analyzeRes.ok) {
-          const err = await analyzeRes.json().catch(() => ({ error: `HTTP ${analyzeRes.status}` }));
-          throw new Error(err.error || `Analysis failed: ${analyzeRes.status}`);
-        }
-        const { brief: generatedBrief } = (await analyzeRes.json()) as { brief: string };
-        finalBrief = generatedBrief;
-      }
-
-      if (!finalBrief) return;
-
-      // Step 2: kick off the diagram job
-      setLoadingStep("generating");
       const startRes = await fetch("/api/image/excalidraw/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -104,19 +104,14 @@ export function ImageClient() {
         throw new Error(err.error || `Server returned ${startRes.status}`);
       }
       const { jobId } = (await startRes.json()) as { jobId: string };
-
-      // Step 3: poll until done
       const scene = await pollForScene(jobId);
-
-      // Step 4: render client-side
       const url = await renderExcalidrawToPngUrl(scene);
       setPngUrl(url);
       setElapsed(Date.now() - t0);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed");
     } finally {
-      setLoading(false);
-      setLoadingStep(null);
+      setGenerating(false);
     }
   }
 
@@ -130,14 +125,7 @@ export function ImageClient() {
     a.remove();
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-      e.preventDefault();
-      generate();
-    }
-  }
-
-  const canGenerate = mode === "post" ? post.trim().length > 0 : brief.trim().length > 0;
+  const loading = analyzing || generating;
 
   return (
     <div className="max-w-[960px] mx-auto">
@@ -146,70 +134,72 @@ export function ImageClient() {
           Image
         </h1>
         <p className="text-sm" style={{ color: "var(--vl-text-muted)" }}>
-          Turn a post into a diagram, or write your own brief.
+          Paste a post, analyze it to get a brief, then generate the diagram.
         </p>
       </header>
 
-      {/* Mode tabs */}
+      {/* Step 1: Post input */}
       <div
-        className="flex gap-1 p-1 rounded-xl mb-5 w-fit"
-        style={{ background: "var(--vl-bg-card)", border: "1px solid var(--vl-border)" }}
-      >
-        {(["post", "brief"] as Mode[]).map((m) => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            disabled={loading}
-            className="px-4 py-1.5 rounded-lg text-[13px] font-medium transition-colors"
-            style={{
-              background: mode === m ? "var(--vl-accent)" : "transparent",
-              color: mode === m ? "#fff" : "var(--vl-text-muted)",
-            }}
-          >
-            {m === "post" ? "From post" : "From brief"}
-          </button>
-        ))}
-      </div>
-
-      {/* Input area */}
-      <div
-        className="rounded-2xl border p-5 mb-6"
+        className="rounded-2xl border p-5 mb-4"
         style={{ borderColor: "var(--vl-border)", background: "var(--vl-bg-card)" }}
       >
-        {mode === "post" ? (
-          <>
-            <p className="text-[12px] mb-3" style={{ color: "var(--vl-text-muted)" }}>
-              Paste your LinkedIn post. Claude will pick the best diagram type and generate it automatically.
-            </p>
-            <textarea
-              value={post}
-              onChange={(e) => setPost(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder="Paste your post here…"
-              disabled={loading}
-              rows={8}
-              className="w-full bg-transparent outline-none resize-none text-[14px] leading-[1.6]"
-              style={{ color: "var(--vl-text-heading)" }}
-            />
-          </>
-        ) : (
-          <>
-            <p className="text-[12px] mb-3" style={{ color: "var(--vl-text-muted)" }}>
-              Describe the diagram directly. Specify the pattern (fork / pipeline / hub / cycle), real labels, and what each step outputs.
-            </p>
-            <textarea
-              value={brief}
-              onChange={(e) => setBrief(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder={`Example: Two-path fork, top to bottom.\n\nLeft path (red): Power user onboarding → friction → Day 10, they're gone\nRight path (green): First win by Day 3 → belief → retention\n\nArrows in periwinkle. All text lowercase.`}
-              disabled={loading}
-              rows={8}
-              className="w-full bg-transparent outline-none resize-none text-[14px] leading-[1.6]"
-              style={{ color: "var(--vl-text-heading)" }}
-            />
-          </>
-        )}
+        <p className="text-[12px] mb-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>
+          Step 1 — paste your LinkedIn post
+        </p>
+        <textarea
+          value={post}
+          onChange={(e) => setPost(e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault();
+              analyzePost();
+            }
+          }}
+          placeholder="Paste your post here…"
+          disabled={loading}
+          rows={7}
+          className="w-full bg-transparent outline-none resize-none text-[14px] leading-[1.6]"
+          style={{ color: "var(--vl-text-heading)" }}
+        />
+        <div className="flex justify-end pt-3 mt-2 border-t" style={{ borderColor: "var(--vl-border)" }}>
+          <button
+            onClick={analyzePost}
+            disabled={loading || !post.trim()}
+            className="px-4 py-2 rounded-md text-[13px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: "var(--vl-accent)", color: "#fff" }}
+          >
+            {analyzing ? "Analyzing…" : "Analyze post"}
+          </button>
+        </div>
+      </div>
 
+      {/* Step 2: Brief (editable) + Generate */}
+      <div
+        className="rounded-2xl border p-5 mb-6"
+        style={{
+          borderColor: brief ? "var(--vl-accent)" : "var(--vl-border)",
+          background: "var(--vl-bg-card)",
+          opacity: brief || !post.trim() ? 1 : 0.5,
+        }}
+      >
+        <p className="text-[12px] mb-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>
+          Step 2 — review the brief, then generate
+        </p>
+        <textarea
+          value={brief}
+          onChange={(e) => setBrief(e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              e.preventDefault();
+              generateDiagram();
+            }
+          }}
+          placeholder="Brief will appear here after you analyze the post. You can also type one manually."
+          disabled={generating}
+          rows={6}
+          className="w-full bg-transparent outline-none resize-none text-[14px] leading-[1.6]"
+          style={{ color: "var(--vl-text-heading)" }}
+        />
         <div
           className="flex items-center gap-2 pt-3 mt-2 border-t"
           style={{ borderColor: "var(--vl-border)" }}
@@ -234,12 +224,12 @@ export function ImageClient() {
             ⌘↵ to generate
           </span>
           <button
-            onClick={generate}
-            disabled={loading || !canGenerate}
+            onClick={generateDiagram}
+            disabled={loading || !brief.trim()}
             className="px-4 py-2 rounded-md text-[13px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "var(--vl-accent)", color: "#fff" }}
           >
-            {loading ? "Generating…" : "Generate diagram"}
+            {generating ? "Generating…" : "Generate diagram"}
           </button>
         </div>
       </div>
@@ -253,7 +243,7 @@ export function ImageClient() {
         </div>
       )}
 
-      {loading && (
+      {generating && (
         <div
           className="rounded-xl border p-8 text-center text-[13px]"
           style={{ borderColor: "var(--vl-border)", background: "var(--vl-bg-card)", color: "var(--vl-text-muted)" }}
@@ -262,13 +252,11 @@ export function ImageClient() {
             className="inline-block w-2 h-2 rounded-full mr-2 align-middle"
             style={{ background: "var(--vl-accent)", animation: "pulse 1.2s ease-in-out infinite" }}
           />
-          {loadingStep === "analyzing"
-            ? "Analysing post and picking the best diagram…"
-            : "Claude is drawing the scene… (~30–60s)"}
+          Claude is drawing the scene… (~30–60s)
         </div>
       )}
 
-      {pngUrl && !loading && (
+      {pngUrl && !generating && (
         <div>
           <div
             className="rounded-xl overflow-hidden border"

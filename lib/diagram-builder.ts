@@ -43,7 +43,7 @@ function makeText(
     x: align === "center" ? cx - w / 2 : cx,
     y: cy - h / 2,
     width: w, height: h,
-    strokeColor: "transparent", backgroundColor: "transparent",
+    strokeColor: color, backgroundColor: "transparent",
     fillStyle: "solid", strokeWidth: 1, strokeStyle: "solid",
     roughness: 1, opacity: 100, angle: 0,
     seed: seed(), version: 1, versionNonce: 0,

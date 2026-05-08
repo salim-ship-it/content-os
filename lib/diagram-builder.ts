@@ -1,20 +1,17 @@
-// Programmatic Excalidraw builder.
-// Claude returns a structured DiagramSpec; this module converts it to valid
-// Excalidraw v2 JSON with correct text dimensions — no text-rendering bugs.
+// Programmatic Excalidraw builder — freeform node-graph on a column grid.
+// Claude returns a DiagramSpec (nodes + edges). This module computes all
+// geometry and produces valid Excalidraw v2 JSON with correct text dimensions.
 
 let _seed = 1;
 function seed() { return ++_seed * 100003; }
 function id() { return Math.random().toString(36).slice(2, 10); }
 
-// Approximate rendered width for Virgil (fontFamily 1) at a given fontSize.
 function textWidth(text: string, fontSize: number): number {
   return Math.max(40, Math.ceil(text.length * fontSize * 0.58));
 }
 function textHeight(fontSize: number, lines = 1): number {
   return Math.ceil(fontSize * 1.4 * lines);
 }
-
-// Wrap text into lines that fit within maxW px.
 function wrapText(text: string, fontSize: number, maxW: number): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
@@ -52,7 +49,7 @@ function makeText(
   text: string, cx: number, cy: number,
   fontSize: number, color: string,
   align: "center" | "left" = "center",
-  maxW?: number  // if set, wrap text to fit within this width
+  maxW?: number
 ) {
   let displayText = text;
   let numLines = 1;
@@ -102,250 +99,183 @@ function makeArrow(
 
 // ─── Spec types ───────────────────────────────────────────────────────────────
 
-export type Step = { label: string; sublabel?: string };
+export type DiagramNode = {
+  id: string;
+  label: string;
+  sublabel?: string;
+  stat?: string;
+  color: string;
+  col: number;
+  row: number;
+  colspan?: number;
+};
 
-export type DiagramSpec =
-  | {
-      pattern: "fork";
-      start: Step;
-      left: { heading: string; color: string; steps: Step[] };
-      right: { heading: string; color: string; steps: Step[] };
-      end?: Step;
-    }
-  | {
-      pattern: "pipeline";
-      steps: (Step & { color?: string })[];
-    }
-  | {
-      pattern: "timeline";
-      events: (Step & { marker?: string })[];
-    };
+export type DiagramEdge = {
+  from: string;
+  to: string;
+  color?: string;
+};
 
-// ─── Fork builder ─────────────────────────────────────────────────────────────
+export type DiagramHeading = {
+  col: number;
+  label: string;
+  sublabel?: string;
+  color: string;
+};
 
-function buildFork(
-  spec: Extract<DiagramSpec, { pattern: "fork" }>,
-  canvasW: number,
-  canvasH: number
-) {
-  const elements: ReturnType<typeof makeRect | typeof makeText | typeof makeArrow>[] = [];
+export type DiagramSpec = {
+  cols: number;
+  headings?: DiagramHeading[];
+  nodes: DiagramNode[];
+  edges: DiagramEdge[];
+};
 
-  // Columns fill the full canvas width with a fixed gutter
-  const EDGE = 40;
-  const COL_GAP = 36;
-  const BOX_W = Math.floor((canvasW - 2 * EDGE - COL_GAP) / 2);
-  const TEXT_PAD = 18; // padding inside box on each side
-  const textMaxW = BOX_W - TEXT_PAD * 2;
-  const LABEL_FONT = 17;
-  const BOX_H_MIN = 56;
-  const SUBLABEL_FONT = 12;
-  const SUBLABEL_AREA = 34; // reserved space below box for sublabel
-  const ARROW_GAP = 18;     // gap between sublabel bottom and next arrow start
-  const centerX = canvasW / 2;
-
-  // Column centers
-  const leftCX = EDGE + BOX_W / 2;
-  const rightCX = EDGE + BOX_W + COL_GAP + BOX_W / 2;
-
-  // Helper: compute dynamic box height from wrapped label
-  function boxHeight(label: string): number {
-    const lines = wrapText(label, LABEL_FONT, textMaxW);
-    return Math.max(BOX_H_MIN, textHeight(LABEL_FONT, lines.length) + TEXT_PAD * 2);
-  }
-
-  let y = 60;
-
-  // ── Start box ──
-  const startBH = boxHeight(spec.start.label);
-  const startW = Math.min(BOX_W, canvasW * 0.5);
-  const startX = centerX - startW / 2;
-  elements.push(makeRect(startX, y, startW, startBH, "#4ade80"));
-  elements.push(makeText(spec.start.label, centerX, y + startBH / 2, LABEL_FONT + 2, "#f0edee", "center", startW - TEXT_PAD * 2));
-  if (spec.start.sublabel) {
-    elements.push(makeText(spec.start.sublabel, centerX, y + startBH + 16, SUBLABEL_FONT, "#7a7580"));
-  }
-
-  const forkY = y + startBH;
-  y += startBH + 90;
-
-  // ── Fork arrows (land at y, then headings below) ──
-  elements.push(makeArrow(centerX, forkY, leftCX, y));
-  elements.push(makeArrow(centerX, forkY, rightCX, y));
-
-  // ── Column headings below arrow tips ──
-  elements.push(makeText(spec.left.heading, leftCX, y + 20, 15, "#A3A4D8", "center", BOX_W));
-  elements.push(makeText(spec.right.heading, rightCX, y + 20, 15, "#A3A4D8", "center", BOX_W));
-  y += 50;
-
-  // ── Steps ──
-  const leftSteps = spec.left?.steps ?? [];
-  const rightSteps = spec.right?.steps ?? [];
-  const maxSteps = Math.max(leftSteps.length, rightSteps.length);
-
-  // Pre-compute each row's height so rows stay aligned between columns
-  const rowHeights: number[] = [];
-  for (let i = 0; i < maxSteps; i++) {
-    const lh = leftSteps[i] ? boxHeight(leftSteps[i].label) : BOX_H_MIN;
-    const rh = rightSteps[i] ? boxHeight(rightSteps[i].label) : BOX_H_MIN;
-    rowHeights.push(Math.max(lh, rh));
-  }
-
-  const rowStartYs: number[] = [];
-  let rowY = y;
-  for (let i = 0; i < maxSteps; i++) {
-    rowStartYs.push(rowY);
-    rowY += rowHeights[i] + SUBLABEL_AREA + ARROW_GAP + 10;
-  }
-
-  const leftBoxBottomYs: number[] = [];
-  const rightBoxBottomYs: number[] = [];
-
-  for (let i = 0; i < maxSteps; i++) {
-    const stepY = rowStartYs[i];
-    const bh = rowHeights[i];
-
-    // Left step
-    if (leftSteps[i]) {
-      const s = leftSteps[i];
-      elements.push(makeRect(EDGE, stepY, BOX_W, bh, spec.left?.color ?? "#f87171"));
-      elements.push(makeText(s.label, leftCX, stepY + bh / 2, LABEL_FONT, "#f0edee", "center", textMaxW));
-      if (s.sublabel) {
-        elements.push(makeText(s.sublabel, leftCX, stepY + bh + 16, SUBLABEL_FONT, "#7a7580", "center", BOX_W));
-      }
-      if (i > 0) {
-        const prevBH = rowHeights[i - 1];
-        const prevHasSub = !!leftSteps[i - 1]?.sublabel;
-        const fromY = rowStartYs[i - 1] + prevBH + (prevHasSub ? SUBLABEL_AREA - 4 : 8);
-        elements.push(makeArrow(leftCX, fromY, leftCX, stepY));
-      }
-      leftBoxBottomYs.push(stepY + bh);
-    }
-
-    // Right step
-    if (rightSteps[i]) {
-      const s = rightSteps[i];
-      const rightX = EDGE + BOX_W + COL_GAP;
-      elements.push(makeRect(rightX, stepY, BOX_W, bh, spec.right?.color ?? "#4ade80"));
-      elements.push(makeText(s.label, rightCX, stepY + bh / 2, LABEL_FONT, "#f0edee", "center", textMaxW));
-      if (s.sublabel) {
-        elements.push(makeText(s.sublabel, rightCX, stepY + bh + 16, SUBLABEL_FONT, "#7a7580", "center", BOX_W));
-      }
-      if (i > 0) {
-        const prevBH = rowHeights[i - 1];
-        const prevHasSub = !!rightSteps[i - 1]?.sublabel;
-        const fromY = rowStartYs[i - 1] + prevBH + (prevHasSub ? SUBLABEL_AREA - 4 : 8);
-        elements.push(makeArrow(rightCX, fromY, rightCX, stepY));
-      }
-      rightBoxBottomYs.push(stepY + bh);
-    }
-  }
-
-  // ── End box (convergence) ──
-  if (spec.end) {
-    const lastRowBottom = rowStartYs[maxSteps - 1] + rowHeights[maxSteps - 1];
-    const endY = lastRowBottom + SUBLABEL_AREA + 40;
-    const endW = Math.min(BOX_W, canvasW * 0.5);
-    const endX = centerX - endW / 2;
-    const endBH = boxHeight(spec.end.label);
-    elements.push(makeRect(endX, endY, endW, endBH, "#8182C1"));
-    elements.push(makeText(spec.end.label, centerX, endY + endBH / 2, LABEL_FONT, "#f0edee", "center", endW - TEXT_PAD * 2));
-    if (spec.end.sublabel) {
-      elements.push(makeText(spec.end.sublabel, centerX, endY + endBH + 16, SUBLABEL_FONT, "#7a7580"));
-    }
-    const lastLeftY = leftBoxBottomYs[leftBoxBottomYs.length - 1] ?? endY;
-    const lastRightY = rightBoxBottomYs[rightBoxBottomYs.length - 1] ?? endY;
-    elements.push(makeArrow(leftCX, lastLeftY, centerX, endY));
-    elements.push(makeArrow(rightCX, lastRightY, centerX, endY));
-  }
-
-  return elements;
-}
-
-// ─── Pipeline builder ─────────────────────────────────────────────────────────
-
-function buildPipeline(
-  spec: Extract<DiagramSpec, { pattern: "pipeline" }>,
-  canvasW: number,
-) {
-  const elements: ReturnType<typeof makeRect | typeof makeText | typeof makeArrow>[] = [];
-  const steps = spec.steps ?? [];
-  const BOX_W = Math.min(220, (canvasW - 80) / Math.max(1, steps.length) - 40);
-  const BOX_H = 64;
-  const GAP = 40;
-  const totalW = steps.length * BOX_W + (steps.length - 1) * GAP;
-  let x = (canvasW - totalW) / 2;
-  const y = 200;
-
-  for (let i = 0; i < steps.length; i++) {
-    const s = steps[i];
-    const color = s.color ?? "#8182C1";
-    const cx = x + BOX_W / 2;
-    elements.push(makeRect(x, y, BOX_W, BOX_H, color));
-    elements.push(makeText(s.label, cx, y + BOX_H / 2, 18, "#f0edee"));
-    if (s.sublabel) {
-      elements.push(makeText(s.sublabel, cx, y + BOX_H + 16, 12, "#7a7580"));
-    }
-    if (i > 0) {
-      elements.push(makeArrow(x - GAP, y + BOX_H / 2, x, y + BOX_H / 2));
-    }
-    x += BOX_W + GAP;
-  }
-
-  return elements;
-}
-
-// ─── Timeline builder ─────────────────────────────────────────────────────────
-
-function buildTimeline(
-  spec: Extract<DiagramSpec, { pattern: "timeline" }>,
-  canvasW: number,
-) {
-  const elements: ReturnType<typeof makeRect | typeof makeText | typeof makeArrow>[] = [];
-  const events = spec.events ?? [];
-  const n = events.length;
-  const spacing = (canvasW - 80) / (n - 1 || 1);
-  const lineY = 300;
-  const startX = 40;
-
-  // Horizontal line
-  elements.push(makeArrow(startX, lineY, startX + spacing * (n - 1) + 20, lineY));
-
-  for (let i = 0; i < n; i++) {
-    const ev = events[i];
-    const cx = startX + i * spacing;
-    const above = i % 2 === 0;
-    const boxY = above ? lineY - 100 : lineY + 30;
-
-    elements.push(makeRect(cx - 70, boxY, 140, 56, "#8182C1"));
-    elements.push(makeText(ev.label, cx, boxY + 28, 16, "#f0edee"));
-    if (ev.sublabel) {
-      elements.push(makeText(ev.sublabel, cx, boxY + (above ? -16 : 72), 12, "#7a7580"));
-    }
-    if (ev.marker) {
-      elements.push(makeText(ev.marker, cx, lineY + (above ? 18 : -18), 13, "#A3A4D8"));
-    }
-    // Tick
-    elements.push(makeArrow(cx, above ? boxY + 56 : lineY, cx, above ? lineY : boxY));
-  }
-
-  return elements;
-}
-
-// ─── Public entry point ───────────────────────────────────────────────────────
+// ─── Builder ──────────────────────────────────────────────────────────────────
 
 export function buildDiagram(
   spec: DiagramSpec,
   canvasW: number,
   canvasH: number,
 ): object {
-  let elements: object[];
+  const elements: object[] = [];
 
-  if (spec.pattern === "fork") {
-    elements = buildFork(spec, canvasW, canvasH);
-  } else if (spec.pattern === "pipeline") {
-    elements = buildPipeline(spec, canvasW);
-  } else {
-    elements = buildTimeline(spec, canvasW);
+  const EDGE = 40;
+  const COL_GAP = 28;
+  const ROW_GAP = 28;
+  const TEXT_PAD = 14;
+  const BOX_H_MIN = 52;
+  const LABEL_FONT = 16;
+  const SUBLABEL_FONT = 11;
+  const STAT_FONT = 13;
+  const HEADING_FONT = 26;
+  const SUBHEADING_FONT = 12;
+
+  const cols = Math.max(1, Math.min(5, spec.cols || 1));
+  const colW = Math.floor((canvasW - 2 * EDGE - COL_GAP * (cols - 1)) / cols);
+  const nodes = spec.nodes ?? [];
+  const edges = spec.edges ?? [];
+  const headings = spec.headings ?? [];
+
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+  // ── Column helpers ──
+  function nSpan(n: DiagramNode) { return Math.max(1, Math.min(cols - n.col, n.colspan ?? 1)); }
+  function nW(n: DiagramNode) { return nSpan(n) * colW + (nSpan(n) - 1) * COL_GAP; }
+  function nX(n: DiagramNode) { return EDGE + n.col * (colW + COL_GAP); }
+  function nCX(n: DiagramNode) { return nX(n) + nW(n) / 2; }
+  function nTextW(n: DiagramNode) { return nW(n) - TEXT_PAD * 2; }
+  function nBoxH(n: DiagramNode) {
+    const lines = wrapText(n.label, LABEL_FONT, nTextW(n));
+    return Math.max(BOX_H_MIN, textHeight(LABEL_FONT, lines.length) + TEXT_PAD * 2);
+  }
+  function nExtraH(n: DiagramNode) {
+    let h = 0;
+    if (n.sublabel) h += textHeight(SUBLABEL_FONT) + 8;
+    if (n.stat) h += textHeight(STAT_FONT) + 6;
+    return h;
+  }
+  function nTotalH(n: DiagramNode) { return nBoxH(n) + nExtraH(n) + 10; }
+
+  // ── Row heights ──
+  const maxRow = nodes.reduce((m, n) => Math.max(m, n.row ?? 0), 0);
+  const rowH: number[] = new Array(maxRow + 1).fill(BOX_H_MIN + 10);
+  for (const n of nodes) {
+    const r = n.row ?? 0;
+    rowH[r] = Math.max(rowH[r], nTotalH(n));
+  }
+
+  // ── Start Y (after headings) ──
+  let startY = 50;
+  if (headings.length > 0) {
+    const maxHH = headings.reduce((m, h) => {
+      const lines = wrapText(h.label, HEADING_FONT, colW);
+      return Math.max(m, textHeight(HEADING_FONT, lines.length) + (h.sublabel ? 26 : 8) + 20);
+    }, 60);
+
+    for (const h of headings) {
+      const hx = EDGE + (h.col ?? 0) * (colW + COL_GAP);
+      const hcx = hx + colW / 2;
+      let hy = startY;
+      elements.push(makeText(h.label, hcx, hy, HEADING_FONT, h.color, "center", colW));
+      hy += textHeight(HEADING_FONT, wrapText(h.label, HEADING_FONT, colW).length) + 4;
+      if (h.sublabel) {
+        elements.push(makeText(h.sublabel, hcx, hy, SUBHEADING_FONT, "#7a7580", "center", colW));
+      }
+    }
+    startY += maxHH;
+  }
+
+  // ── Row Y positions ──
+  const rowY: number[] = [];
+  let y = startY;
+  for (let r = 0; r <= maxRow; r++) {
+    rowY.push(y);
+    y += rowH[r] + ROW_GAP;
+  }
+
+  // ── Draw nodes, track anchor points for edges ──
+  const anchorTop = new Map<string, number>();
+  const anchorBottom = new Map<string, number>();
+  const anchorLeft = new Map<string, number>();
+  const anchorRight = new Map<string, number>();
+  const anchorCY = new Map<string, number>();
+
+  for (const n of nodes) {
+    const r = n.row ?? 0;
+    const x = nX(n);
+    const w = nW(n);
+    const bh = nBoxH(n);
+    const ny = rowY[r];
+    const cx = nCX(n);
+
+    elements.push(makeRect(x, ny, w, bh, n.color));
+    elements.push(makeText(n.label, cx, ny + bh / 2, LABEL_FONT, "#f0edee", "center", nTextW(n)));
+
+    let ey = ny + bh + 8;
+    if (n.sublabel) {
+      elements.push(makeText(n.sublabel, cx, ey, SUBLABEL_FONT, "#7a7580", "center", w));
+      ey += textHeight(SUBLABEL_FONT) + 6;
+    }
+    if (n.stat) {
+      elements.push(makeText(n.stat, cx, ey, STAT_FONT, n.color, "center", w));
+      ey += textHeight(STAT_FONT) + 4;
+    }
+
+    anchorTop.set(n.id, ny);
+    anchorBottom.set(n.id, ey - 2);
+    anchorLeft.set(n.id, x);
+    anchorRight.set(n.id, x + w);
+    anchorCY.set(n.id, ny + bh / 2);
+  }
+
+  // ── Draw edges ──
+  for (const e of edges) {
+    const from = nodeMap.get(e.from);
+    const to = nodeMap.get(e.to);
+    if (!from || !to) continue;
+
+    const color = e.color ?? "#8182C1";
+    const fx = nCX(from);
+    const tx = nCX(to);
+    const fRow = from.row ?? 0;
+    const tRow = to.row ?? 0;
+
+    if (fRow < tRow) {
+      // Down
+      elements.push(makeArrow(fx, anchorBottom.get(e.from)!, tx, anchorTop.get(e.to)!, color));
+    } else if (fRow > tRow) {
+      // Up (back-edge)
+      elements.push(makeArrow(fx, anchorTop.get(e.from)!, tx, anchorBottom.get(e.to)!, color));
+    } else {
+      // Same row — horizontal
+      const fCY = anchorCY.get(e.from)!;
+      const tCY = anchorCY.get(e.to)!;
+      if ((from.col ?? 0) < (to.col ?? 0)) {
+        elements.push(makeArrow(anchorRight.get(e.from)!, fCY, anchorLeft.get(e.to)!, tCY, color));
+      } else {
+        elements.push(makeArrow(anchorLeft.get(e.from)!, fCY, anchorRight.get(e.to)!, tCY, color));
+      }
+    }
   }
 
   return {

@@ -2,59 +2,70 @@ import { inngest } from "@/lib/inngest";
 import { getSupabase } from "@/lib/supabase";
 import { promises as fs } from "fs";
 import path from "path";
-import { buildDiagram, type DiagramSpec } from "@/lib/diagram-builder";
+import { buildDiagram, type DiagramSpec, type DiagramNode, type DiagramEdge, type DiagramHeading } from "@/lib/diagram-builder";
 
 // Claude returns a DiagramSpec (structured JSON). The diagram-builder then
 // produces the Excalidraw scene programmatically — guaranteeing text renders.
 
-const SYSTEM_PROMPT = `You are a diagram architect. Given a brief, return a DiagramSpec JSON object via the create_diagram_spec tool.
+const SYSTEM_PROMPT = `You are a diagram designer. Given a brief, produce a node-graph spec via the create_diagram_spec tool.
 
-Choose the pattern that best fits the brief:
-- "fork"     — one start box splits into two contrasting paths, then converges
-- "pipeline" — linear sequence of steps left-to-right
-- "timeline" — events along a time axis
+You have a column grid. You decide everything: how many columns, where each node goes, what it says, colors, and which nodes connect.
 
-Rules:
-- Labels must be short (≤ 5 words). Use the exact words from the brief.
-- sublabel is optional — one short phrase describing the output or meaning.
-- For fork: left = bad/wrong path (color "#f87171"), right = good/fix path (color "#4ade80").
-- For pipeline: each step can have an optional color (default "#8182C1").
-- Keep steps to 3–5 per column/pipeline.
-- All labels lowercase.
-
-EXACT JSON SCHEMAS — you must match one of these exactly:
-
-fork:
+SPEC FORMAT (strict JSON):
 {
-  "pattern": "fork",
-  "start": { "label": "short label", "sublabel": "optional" },
-  "left": { "heading": "bad path name", "color": "#f87171", "steps": [{ "label": "step 1" }, { "label": "step 2" }] },
-  "right": { "heading": "good path name", "color": "#4ade80", "steps": [{ "label": "step 1" }, { "label": "step 2" }] },
-  "end": { "label": "convergence label" }
+  "cols": 2,
+  "headings": [
+    { "col": 0, "label": "the wrong way", "sublabel": "what most people do", "color": "#f87171" },
+    { "col": 1, "label": "the fix", "sublabel": "what actually works", "color": "#4ade80" }
+  ],
+  "nodes": [
+    { "id": "start", "label": "user signs up", "col": 0, "row": 0, "color": "#4ade80", "colspan": 2 },
+    { "id": "friction", "label": "hits learning curve", "sublabel": "no quick win", "stat": "day 3", "col": 0, "row": 1, "color": "#f87171" },
+    { "id": "win", "label": "first result delivered", "sublabel": "immediate value", "stat": "day 1", "col": 1, "row": 1, "color": "#4ade80" },
+    { "id": "end", "label": "they believe it works", "col": 0, "row": 3, "color": "#8182C1", "colspan": 2 }
+  ],
+  "edges": [
+    { "from": "start", "to": "friction" },
+    { "from": "start", "to": "win" },
+    { "from": "friction", "to": "end" },
+    { "from": "win", "to": "end" }
+  ]
 }
 
-pipeline:
-{
-  "pattern": "pipeline",
-  "steps": [{ "label": "step 1", "color": "#8182C1" }, { "label": "step 2" }]
-}
+FIELD RULES:
+- cols: 1–4. Choose based on the content — use 1 for a linear story, 2 for a contrast, 3+ for a system with parallel tracks.
+- headings: optional big column titles (use for contrasts or multi-track systems). Skip if content is linear.
+- node.id: unique, short, no spaces (use descriptive names like "friction", "win", "step1").
+- node.col: 0-indexed column (0 to cols-1).
+- node.row: 0-indexed row (start at 0, increment downward).
+- node.colspan: how many columns this box spans (default 1). Use colspan=cols for full-width boxes like a shared start or conclusion.
+- node.color: "#f87171" red (bad/wrong), "#4ade80" green (good/fix/result), "#8182C1" purple (neutral/process), "#fbbf24" yellow (warning/transition).
+- node.sublabel: one short phrase below the box (≤ 6 words). Use it to add meaning.
+- node.stat: a highlighted metric or marker (e.g. "80% churn", "day 3", "+40%"). Shows in the node's color.
+- edge.color: optional, defaults to periwinkle "#8182C1".
+- All label text lowercase.
+- Labels 3–6 words max. If the content is longer, compress it — pick the most important words.
 
-timeline:
-{
-  "pattern": "timeline",
-  "events": [{ "label": "event 1", "marker": "day 1" }, { "label": "event 2" }]
-}`;
+LAYOUT GUIDANCE — pick what fits the post:
+- Contrast (wrong vs right, before vs after): 2 cols, shared top/bottom nodes with colspan=2, different steps in each col.
+- Linear process/journey: 1 col, nodes flow down.
+- System with 2–3 parallel tracks: 2–3 cols, headings for each track, nodes in rows.
+- Framework or breakdown: 2–3 cols, each col is a category, rows are items.
+- Loop/cycle: 1 col, nodes go down then edge back from last to first.
+
+Do NOT invent content. Only use ideas that are in the brief.`;
+
 
 
 const TOOL = {
   name: "create_diagram_spec",
-  description: "Return a structured DiagramSpec that the builder will convert to an Excalidraw scene.",
+  description: "Return a node-graph DiagramSpec. The builder converts it to an Excalidraw scene — it handles all text sizing and positioning.",
   input_schema: {
     type: "object" as const,
     properties: {
       spec: {
         type: "string",
-        description: "The DiagramSpec as a JSON string. Must parse to a valid DiagramSpec object.",
+        description: "JSON string with fields: cols (number), headings (optional array), nodes (array of {id,label,sublabel?,stat?,color,col,row,colspan?}), edges (array of {from,to,color?}).",
       },
     },
     required: ["spec"],

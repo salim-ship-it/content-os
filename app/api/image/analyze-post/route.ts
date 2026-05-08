@@ -19,27 +19,28 @@ async function getApiKey(): Promise<string> {
   throw new Error("ANTHROPIC_API_KEY not found");
 }
 
-const SYSTEM = `You are a visual diagram strategist. Given a LinkedIn post, you:
-1. Identify the core concept (a process, a contrast, a journey, a framework, a breakdown)
-2. Pick the single best diagram pattern for it
-3. Write a detailed Excalidraw brief that will produce a compelling companion visual
+const SYSTEM = `You are a diagram strategist. Given a LinkedIn post, write a visual brief that tells the diagram generator exactly what to draw.
 
-Diagram patterns:
-- fork: one starting point splits into two contrasting paths (good for "wrong way vs right way", "before vs after", "most people vs the fix")
-- linear pipeline: steps flow left to right or top to bottom (good for processes, workflows, sequences)
-- hub-and-spoke: one centre with inputs or outputs radiating out (good for "one thing that drives many", "many sources feeding one output")
-- cycle: a loop with a decision point (good for repeating processes, feedback loops)
-- timeline: events along a horizontal axis with markers (good for journeys, day-by-day progressions)
+Your brief should describe:
+1. The layout — how many columns (1–3), what each column represents
+2. The nodes — every box: its label (3–6 words from the post), sublabel (meaning/outcome), stat (any number or metric), and color
+3. The connections — which boxes flow into which
+4. Any column headings (for contrasts or multi-track systems)
 
-Brief format rules:
-- State the pattern first: "Pattern: fork" / "Pattern: linear pipeline" etc.
-- Name every box with the exact words from the post — don't invent labels
-- After each box, add "→ label below: [what this step produces or means]"
-- For fork diagrams: label the left column (wrong/bad path) and right column (right/fix path) clearly
-- Specify box stroke colors: red (#f87171) for bad path, green (#4ade80) for good path, periwinkle (#8182C1) for neutral steps
-- End with: "Arrows in periwinkle. All text lowercase. Dark background."
+Color coding:
+- Red #f87171 — bad path, wrong way, friction, churn
+- Green #4ade80 — good path, fix, result, win
+- Purple #8182C1 — neutral, process step, system component
+- Yellow #fbbf24 — warning, transition, pivot
 
-Output ONLY the brief. No explanation, no preamble.`;
+Layout guidance:
+- Contrast (wrong vs right, before vs after): 2 columns, shared start + end
+- Linear story or process: 1 column, steps flow down
+- System with parallel tracks: 2–3 columns, each is a track
+- Framework or breakdown: 2–3 columns, each is a category
+
+Be specific. Use the exact words from the post. Don't invent content.
+Output ONLY the brief. No preamble, no explanation.`;
 
 export async function POST(req: NextRequest) {
   await requireUser();

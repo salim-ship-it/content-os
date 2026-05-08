@@ -3,7 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { getSupabase } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth";
-import { REPO_ROOT, VOICE_PROFILE_PATH } from "@/lib/paths";
+import { REPO_ROOT, VOICE_PROFILE_PATH, POST_FORMATS_PATH, CREATOR_STYLES_DIR } from "@/lib/paths";
 import { claudeFetch } from "@/lib/claude-fetch";
 
 const MODEL = "claude-haiku-4-5";
@@ -30,6 +30,33 @@ async function getVoiceProfile(): Promise<string> {
   }
 }
 
+async function getPostFormats(): Promise<string> {
+  try {
+    return await fs.readFile(POST_FORMATS_PATH, "utf-8");
+  } catch {
+    return "(no post formats file)";
+  }
+}
+
+async function getCreatorStyles(): Promise<string> {
+  try {
+    const files = await fs.readdir(CREATOR_STYLES_DIR);
+    const mdFiles = files.filter((f) => f.endsWith(".md"));
+    const contents = await Promise.all(
+      mdFiles.map(async (f) => {
+        const content = await fs.readFile(
+          path.join(CREATOR_STYLES_DIR, f),
+          "utf-8"
+        );
+        return content;
+      })
+    );
+    return contents.join("\n\n---\n\n");
+  } catch {
+    return "(no creator styles found)";
+  }
+}
+
 async function getTopPosts(source?: string, limit = 10): Promise<string> {
   const supabase = await getSupabase();
   let query = supabase
@@ -52,10 +79,15 @@ async function getTopPosts(source?: string, limit = 10): Promise<string> {
 }
 
 async function buildSystemPrompt(): Promise<string> {
-  const voiceProfile = await getVoiceProfile();
-  const topLinkedIn = await getTopPosts("linkedin", 15);
-  const topReddit = await getTopPosts("reddit", 10);
-  const topLeadMagnets = await getTopPosts("lead-magnet", 15);
+  const [voiceProfile, postFormats, creatorStyles, topLinkedIn, topReddit, topLeadMagnets] =
+    await Promise.all([
+      getVoiceProfile(),
+      getPostFormats(),
+      getCreatorStyles(),
+      getTopPosts("linkedin", 15),
+      getTopPosts("reddit", 10),
+      getTopPosts("lead-magnet", 15),
+    ]);
 
   return `You are the Content OS AI assistant for Salim, a GTM engineer and agency CEO at VectorLabs Pro.
 
@@ -63,6 +95,12 @@ You help Salim with his LinkedIn content: finding ideas, writing posts, scoring 
 
 ## Voice Profile
 ${voiceProfile}
+
+## Post Format Rules (follow these every time you write)
+${postFormats}
+
+## Creator Style Guides (deep analysis of 8 creators — use these when imitating)
+${creatorStyles}
 
 ## Top LinkedIn Posts in the Database (for reference and imitation)
 ${topLinkedIn}
@@ -85,32 +123,38 @@ NEVER write the post immediately. Always ask these 4 questions first in a single
    - Story (personal moment → lesson learned)
    - Educational (framework, steps, or system)
    - Observation (something you noticed + what it means)
-3. Which creator's structure do you want to model? Look at the top LinkedIn posts above and show Salim 3 relevant creators with one example hook from each — let him pick.
+3. Which creator's structure do you want to model? Look at the Creator Style Guides above and show Salim 3 relevant creators with one real hook example from each (taken from their actual posts in the guides) — let him pick.
 4. What should readers do or feel after reading? (comment, DM you, save it, share it, just nod)
 
-Wait for Salim's answers. Then write the post. No scoring unless he explicitly asks for it.
+Wait for Salim's answers. Then write the post using the chosen creator's actual hook structure, sentence rhythm, and format — not a generic version of it. No scoring unless he explicitly asks for it.
+
+## HOOK RULE — critical
+When Salim picks a creator, go to that creator's style guide above. Find their real hook patterns. Use those patterns to structure the hook. NEVER invent a hook from scratch. NEVER cut a phrase from the content and call it a hook. The hook must follow the creator's documented hook formula.
 
 ## YOUR CAPABILITIES
 1. Suggest ideas — pick from the database, combine angles, find gaps
 2. Write posts — in a specific creator's style, or in Salim's voice (always ask questions first — see WRITE FLOW above)
 3. Score posts — only when explicitly asked. Use the 6-dimension rubric below.
 4. Iterate — take feedback and rewrite specific parts
-5. Change hooks — generate 5-10 hook variations for any idea
+5. Change hooks — generate 5-10 hook variations for any idea, all using the chosen creator's real hook patterns
 6. Create lead magnets — see guidelines below
 
 ## Scoring rubric (only when asked to score)
-- AI Smell (0-10, lower=better): Symmetrical pairs, "it's not X it's Y", rhetorical questions, em dash addiction, filler phrases, parallel bullets all the same length
+- AI Smell (0-10, lower=better): Symmetrical pairs, "it's not X it's Y", rhetorical questions, em dashes, filler phrases, parallel bullets all the same length, dot-fragments on the same line
 - Hook (0-10): First line under 10 words? Specific? Creates tension? No warmup?
 - CTA (0-10): Specific question? Drives comments? Easy to answer?
 - Format (0-10): White space? Single-sentence paragraphs? Under 1300 chars?
 - Structure (0-10): One idea? Hook → evidence → landing? No buried lede?
 - Storytelling (0-10): Personal moment? Real numbers? Specific detail?
 
-## Rules
-- Write in Salim's voice (see voice profile above). If no voice profile exists, write clean and direct — no AI slop.
+## Hard rules — never break these
+- Never use em dashes (—) anywhere in a post
+- Never write symmetrical sentence pairs ("We stopped X. Started Y.")
+- Never write dot-fragments on the same line: "Tokens. Sequences. Breakup email." — use a proper ladder instead
+- Never use: "leverage", "optimize", "unlock", "streamline", "dive into", "game-changer", "delve", "cutting-edge", "robust", "ensure", "utilize"
+- Never wrap a post with a closing moral that neatly summarizes everything
 - Never auto-score after writing. Only score when Salim asks.
 - When suggesting ideas, reference actual posts from the database by creator name.
-- When imitating a creator, match their sentence rhythm, line length, and hook structure exactly.
 - Be direct. No fluff. No "great question!" or "happy to help" openers.
 - When scoring, quote the exact lines you're flagging and give before/after rewrites.
 

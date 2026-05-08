@@ -7,12 +7,29 @@ function seed() { return ++_seed * 100003; }
 function id() { return Math.random().toString(36).slice(2, 10); }
 
 // Approximate rendered width for Virgil (fontFamily 1) at a given fontSize.
-// Rule of thumb: ~0.55 × fontSize per character.
 function textWidth(text: string, fontSize: number): number {
   return Math.max(40, Math.ceil(text.length * fontSize * 0.58));
 }
 function textHeight(fontSize: number, lines = 1): number {
-  return Math.ceil(fontSize * 1.35 * lines);
+  return Math.ceil(fontSize * 1.4 * lines);
+}
+
+// Wrap text into lines that fit within maxW px.
+function wrapText(text: string, fontSize: number, maxW: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (textWidth(candidate, fontSize) <= maxW) {
+      line = candidate;
+    } else {
+      if (line) lines.push(line);
+      line = word;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [""];
 }
 
 function makeRect(
@@ -34,10 +51,18 @@ function makeRect(
 function makeText(
   text: string, cx: number, cy: number,
   fontSize: number, color: string,
-  align: "center" | "left" = "center"
+  align: "center" | "left" = "center",
+  maxW?: number  // if set, wrap text to fit within this width
 ) {
-  const w = textWidth(text, fontSize);
-  const h = textHeight(fontSize);
+  let displayText = text;
+  let numLines = 1;
+  if (maxW) {
+    const lines = wrapText(text, fontSize, maxW);
+    displayText = lines.join("\n");
+    numLines = lines.length;
+  }
+  const w = maxW ?? textWidth(text, fontSize);
+  const h = textHeight(fontSize, numLines);
   return {
     id: id(), type: "text",
     x: align === "center" ? cx - w / 2 : cx,
@@ -48,10 +73,10 @@ function makeText(
     roughness: 1, opacity: 100, angle: 0,
     seed: seed(), version: 1, versionNonce: 0,
     isDeleted: false, groupIds: [], boundElements: [], link: null, locked: false,
-    text, originalText: text,
+    text: displayText, originalText: displayText,
     fontSize, fontFamily: 1,
     textAlign: align, verticalAlign: "middle",
-    containerId: null, lineHeight: 1.25, roundness: null,
+    containerId: null, lineHeight: 1.35, roundness: null,
   };
 }
 
@@ -105,98 +130,132 @@ function buildFork(
 ) {
   const elements: ReturnType<typeof makeRect | typeof makeText | typeof makeArrow>[] = [];
 
-  const BOX_W = Math.min(300, canvasW * 0.28);
-  const BOX_H = 64;
-  const SUBLABEL_H = 36; // height reserved for sublabel text below a box
-  const ROW_GAP = BOX_H + SUBLABEL_H + 36; // box + sublabel clearance + arrow gap
-  const COL_GAP = canvasW * 0.06;
+  // Columns fill the full canvas width with a fixed gutter
+  const EDGE = 40;
+  const COL_GAP = 36;
+  const BOX_W = Math.floor((canvasW - 2 * EDGE - COL_GAP) / 2);
+  const TEXT_PAD = 18; // padding inside box on each side
+  const textMaxW = BOX_W - TEXT_PAD * 2;
+  const LABEL_FONT = 17;
+  const BOX_H_MIN = 56;
+  const SUBLABEL_FONT = 12;
+  const SUBLABEL_AREA = 34; // reserved space below box for sublabel
+  const ARROW_GAP = 18;     // gap between sublabel bottom and next arrow start
   const centerX = canvasW / 2;
+
+  // Column centers
+  const leftCX = EDGE + BOX_W / 2;
+  const rightCX = EDGE + BOX_W + COL_GAP + BOX_W / 2;
+
+  // Helper: compute dynamic box height from wrapped label
+  function boxHeight(label: string): number {
+    const lines = wrapText(label, LABEL_FONT, textMaxW);
+    return Math.max(BOX_H_MIN, textHeight(LABEL_FONT, lines.length) + TEXT_PAD * 2);
+  }
 
   let y = 60;
 
   // ── Start box ──
-  const startX = centerX - BOX_W / 2;
-  elements.push(makeRect(startX, y, BOX_W, BOX_H, "#4ade80"));
-  elements.push(makeText(spec.start.label, centerX, y + BOX_H / 2, 20, "#f0edee"));
+  const startBH = boxHeight(spec.start.label);
+  const startW = Math.min(BOX_W, canvasW * 0.5);
+  const startX = centerX - startW / 2;
+  elements.push(makeRect(startX, y, startW, startBH, "#4ade80"));
+  elements.push(makeText(spec.start.label, centerX, y + startBH / 2, LABEL_FONT + 2, "#f0edee", "center", startW - TEXT_PAD * 2));
   if (spec.start.sublabel) {
-    elements.push(makeText(spec.start.sublabel, centerX, y + BOX_H + 18, 13, "#7a7580"));
+    elements.push(makeText(spec.start.sublabel, centerX, y + startBH + 16, SUBLABEL_FONT, "#7a7580"));
   }
 
-  const forkY = y + BOX_H;
-  y += BOX_H + 90;
+  const forkY = y + startBH;
+  y += startBH + 90;
 
-  // Column X centres
-  const leftCX = centerX - COL_GAP / 2 - BOX_W / 2;
-  const rightCX = centerX + COL_GAP / 2 + BOX_W / 2;
+  // ── Fork arrows (land at y, then headings below) ──
+  elements.push(makeArrow(centerX, forkY, leftCX, y));
+  elements.push(makeArrow(centerX, forkY, rightCX, y));
 
-  // ── Fork arrows from start box (land at y) ──
-  const startCX = centerX;
-  elements.push(makeArrow(startCX, forkY, leftCX, y));
-  elements.push(makeArrow(startCX, forkY, rightCX, y));
-
-  // ── Column headings — placed BELOW arrow endpoints so they don't overlap ──
-  elements.push(makeText(spec.left.heading, leftCX, y + 22, 18, "#A3A4D8"));
-  elements.push(makeText(spec.right.heading, rightCX, y + 22, 18, "#A3A4D8"));
-  y += 52;
+  // ── Column headings below arrow tips ──
+  elements.push(makeText(spec.left.heading, leftCX, y + 20, 15, "#A3A4D8", "center", BOX_W));
+  elements.push(makeText(spec.right.heading, rightCX, y + 20, 15, "#A3A4D8", "center", BOX_W));
+  y += 50;
 
   // ── Steps ──
   const leftSteps = spec.left?.steps ?? [];
   const rightSteps = spec.right?.steps ?? [];
   const maxSteps = Math.max(leftSteps.length, rightSteps.length);
+
+  // Pre-compute each row's height so rows stay aligned between columns
+  const rowHeights: number[] = [];
+  for (let i = 0; i < maxSteps; i++) {
+    const lh = leftSteps[i] ? boxHeight(leftSteps[i].label) : BOX_H_MIN;
+    const rh = rightSteps[i] ? boxHeight(rightSteps[i].label) : BOX_H_MIN;
+    rowHeights.push(Math.max(lh, rh));
+  }
+
+  const rowStartYs: number[] = [];
+  let rowY = y;
+  for (let i = 0; i < maxSteps; i++) {
+    rowStartYs.push(rowY);
+    rowY += rowHeights[i] + SUBLABEL_AREA + ARROW_GAP + 10;
+  }
+
   const leftBoxBottomYs: number[] = [];
   const rightBoxBottomYs: number[] = [];
 
   for (let i = 0; i < maxSteps; i++) {
-    const stepY = y + i * ROW_GAP;
+    const stepY = rowStartYs[i];
+    const bh = rowHeights[i];
 
     // Left step
     if (leftSteps[i]) {
       const s = leftSteps[i];
-      const bx = leftCX - BOX_W / 2;
-      elements.push(makeRect(bx, stepY, BOX_W, BOX_H, spec.left?.color ?? "#f87171"));
-      elements.push(makeText(s.label, leftCX, stepY + BOX_H / 2, 18, "#f0edee"));
+      elements.push(makeRect(EDGE, stepY, BOX_W, bh, spec.left?.color ?? "#f87171"));
+      elements.push(makeText(s.label, leftCX, stepY + bh / 2, LABEL_FONT, "#f0edee", "center", textMaxW));
       if (s.sublabel) {
-        elements.push(makeText(s.sublabel, leftCX, stepY + BOX_H + 16, 12, "#7a7580"));
+        elements.push(makeText(s.sublabel, leftCX, stepY + bh + 16, SUBLABEL_FONT, "#7a7580", "center", BOX_W));
       }
       if (i > 0) {
-        const prevHasSublabel = !!leftSteps[i - 1]?.sublabel;
-        const arrowFromY = stepY - ROW_GAP + BOX_H + (prevHasSublabel ? SUBLABEL_H : 8);
-        elements.push(makeArrow(leftCX, arrowFromY, leftCX, stepY));
+        const prevBH = rowHeights[i - 1];
+        const prevHasSub = !!leftSteps[i - 1]?.sublabel;
+        const fromY = rowStartYs[i - 1] + prevBH + (prevHasSub ? SUBLABEL_AREA - 4 : 8);
+        elements.push(makeArrow(leftCX, fromY, leftCX, stepY));
       }
-      leftBoxBottomYs.push(stepY + BOX_H);
+      leftBoxBottomYs.push(stepY + bh);
     }
 
     // Right step
     if (rightSteps[i]) {
       const s = rightSteps[i];
-      const bx = rightCX - BOX_W / 2;
-      elements.push(makeRect(bx, stepY, BOX_W, BOX_H, spec.right?.color ?? "#4ade80"));
-      elements.push(makeText(s.label, rightCX, stepY + BOX_H / 2, 18, "#f0edee"));
+      const rightX = EDGE + BOX_W + COL_GAP;
+      elements.push(makeRect(rightX, stepY, BOX_W, bh, spec.right?.color ?? "#4ade80"));
+      elements.push(makeText(s.label, rightCX, stepY + bh / 2, LABEL_FONT, "#f0edee", "center", textMaxW));
       if (s.sublabel) {
-        elements.push(makeText(s.sublabel, rightCX, stepY + BOX_H + 16, 12, "#7a7580"));
+        elements.push(makeText(s.sublabel, rightCX, stepY + bh + 16, SUBLABEL_FONT, "#7a7580", "center", BOX_W));
       }
       if (i > 0) {
-        const prevHasSublabel = !!rightSteps[i - 1]?.sublabel;
-        const arrowFromY = stepY - ROW_GAP + BOX_H + (prevHasSublabel ? SUBLABEL_H : 8);
-        elements.push(makeArrow(rightCX, arrowFromY, rightCX, stepY));
+        const prevBH = rowHeights[i - 1];
+        const prevHasSub = !!rightSteps[i - 1]?.sublabel;
+        const fromY = rowStartYs[i - 1] + prevBH + (prevHasSub ? SUBLABEL_AREA - 4 : 8);
+        elements.push(makeArrow(rightCX, fromY, rightCX, stepY));
       }
-      rightBoxBottomYs.push(stepY + BOX_H);
+      rightBoxBottomYs.push(stepY + bh);
     }
   }
 
   // ── End box (convergence) ──
   if (spec.end) {
-    const lastY = y + (maxSteps - 1) * ROW_GAP + BOX_H + 60;
-    const endX = centerX - BOX_W / 2;
-    elements.push(makeRect(endX, lastY, BOX_W, BOX_H, "#8182C1"));
-    elements.push(makeText(spec.end.label, centerX, lastY + BOX_H / 2, 18, "#f0edee"));
+    const lastRowBottom = rowStartYs[maxSteps - 1] + rowHeights[maxSteps - 1];
+    const endY = lastRowBottom + SUBLABEL_AREA + 40;
+    const endW = Math.min(BOX_W, canvasW * 0.5);
+    const endX = centerX - endW / 2;
+    const endBH = boxHeight(spec.end.label);
+    elements.push(makeRect(endX, endY, endW, endBH, "#8182C1"));
+    elements.push(makeText(spec.end.label, centerX, endY + endBH / 2, LABEL_FONT, "#f0edee", "center", endW - TEXT_PAD * 2));
     if (spec.end.sublabel) {
-      elements.push(makeText(spec.end.sublabel, centerX, lastY + BOX_H + 16, 12, "#7a7580"));
+      elements.push(makeText(spec.end.sublabel, centerX, endY + endBH + 16, SUBLABEL_FONT, "#7a7580"));
     }
-    const lastLeftY = leftBoxBottomYs[leftBoxBottomYs.length - 1] ?? lastY;
-    const lastRightY = rightBoxBottomYs[rightBoxBottomYs.length - 1] ?? lastY;
-    elements.push(makeArrow(leftCX, lastLeftY, centerX, lastY));
-    elements.push(makeArrow(rightCX, lastRightY, centerX, lastY));
+    const lastLeftY = leftBoxBottomYs[leftBoxBottomYs.length - 1] ?? endY;
+    const lastRightY = rightBoxBottomYs[rightBoxBottomYs.length - 1] ?? endY;
+    elements.push(makeArrow(leftCX, lastLeftY, centerX, endY));
+    elements.push(makeArrow(rightCX, lastRightY, centerX, endY));
   }
 
   return elements;

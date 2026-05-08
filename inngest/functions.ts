@@ -2,83 +2,40 @@ import { inngest } from "@/lib/inngest";
 import { getSupabase } from "@/lib/supabase";
 import { promises as fs } from "fs";
 import path from "path";
+import { buildDiagram, type DiagramSpec } from "@/lib/diagram-builder";
 
-// Background job that calls Claude (Sonnet 4.6) to generate an Excalidraw
-// scene from a brief, then updates the image_jobs row in Supabase.
-//
-// Runs on Inngest infra → not bound by Vercel's 60s function timeout.
+// Claude returns a DiagramSpec (structured JSON). The diagram-builder then
+// produces the Excalidraw scene programmatically — guaranteeing text renders.
 
-const SYSTEM_PROMPT = `You generate Excalidraw v2 scene JSON for hand-drawn LinkedIn diagrams.
+const SYSTEM_PROMPT = `You are a diagram architect. Given a brief, return a DiagramSpec JSON object via the create_diagram_spec tool.
 
-CRITICAL RULE — TEXT RENDERING:
-NEVER use containerId on text elements. NEVER add text ids to a rectangle's boundElements.
-ALL text must be free-floating (containerId: null, boundElements: []).
-To label a box, place a separate free-floating text element centred over it using the same x/y centre.
-Bound text is silently dropped by the renderer. Free-floating text always appears.
+Supported patterns:
+- "fork"     — one start splits into two contrasting paths, then converges
+- "pipeline" — linear sequence of steps left-to-right
+- "timeline" — events along a time axis
 
-Visual style (always apply):
-- Background: #14141c (dark mode)
-- Accent: Periwinkle #8182C1
-- Font: fontFamily 1 (Virgil) for ALL text
-- Boxes: strokeStyle "dotted", roughness 2, roundness {"type":3}, strokeWidth 2, backgroundColor "transparent", fillStyle "solid"
-- Arrows: strokeStyle "solid", roughness 1, strokeColor #8182C1, endArrowhead "arrow", startArrowhead null
-- Box label text: free-floating, centred over its box, color #f0edee, fontSize 20, textAlign "center", verticalAlign "middle"
-- Evidence text (under box): free-floating, color #7a7580, fontSize 13, textAlign "center"
-- Section title text: free-floating above column, color #A3A4D8, fontSize 28, textAlign "center"
-- All text lowercase
+Choose the pattern that best fits the brief.
 
-Color semantics for box strokeColor:
-- Normal step: #8182C1
-- Warning/bad path: #f87171
-- Success/good path: #4ade80
-- Start/end: #4ade80
-
-Box sizing: width at least 260px, height at least 60px. Make boxes wide enough so the label fits on one line.
-Label positioning: place the text element at x = box.x + box.width/2, y = box.y + box.height/2. Use textAlign "center".
-
-JSON schema — every rectangle element needs exactly these fields:
-{ "id", "type":"rectangle", "x", "y", "width", "height", "strokeColor", "backgroundColor":"transparent", "fillStyle":"solid", "strokeWidth":2, "strokeStyle":"dotted", "roughness":2, "opacity":100, "angle":0, "seed", "version":1, "versionNonce":0, "isDeleted":false, "groupIds":[], "boundElements":[], "link":null, "locked":false, "roundness":{"type":3} }
-
-Every free-floating text element needs exactly:
-{ "id", "type":"text", "x", "y", "width", "height", "strokeColor":"transparent", "backgroundColor":"transparent", "fillStyle":"solid", "strokeWidth":1, "strokeStyle":"solid", "roughness":1, "opacity":100, "angle":0, "seed", "version":1, "versionNonce":0, "isDeleted":false, "groupIds":[], "boundElements":[], "link":null, "locked":false, "text", "originalText", "fontSize", "fontFamily":1, "textAlign", "verticalAlign":"middle", "containerId":null, "lineHeight":1.25, "roundness":null }
-
-Every arrow element needs:
-{ "id", "type":"arrow", "x", "y", "width", "height", "strokeColor":"#8182C1", "backgroundColor":"transparent", "fillStyle":"solid", "strokeWidth":2, "strokeStyle":"solid", "roughness":1, "opacity":100, "angle":0, "seed", "version":1, "versionNonce":0, "isDeleted":false, "groupIds":[], "boundElements":[], "link":null, "locked":false, "points":[[0,0],[dx,dy]], "startBinding":null, "endBinding":null, "startArrowhead":null, "endArrowhead":"arrow", "roundness":{"type":2} }
-
-Top-level scene:
-{ "type":"excalidraw", "version":2, "source":"https://excalidraw.com", "elements":[...], "appState":{"viewBackgroundColor":"#14141c","gridSize":20}, "files":{} }
-
-Canvas: lay out within {{CANVAS_WIDTH}}×{{CANVAS_HEIGHT}}px with all coordinates positive.
-
-Layout principles:
-- Pick the right pattern: fork (1 splits into 2 paths), linear pipeline, hub-and-spoke, cycle
-- For a fork: start box at top centre, two columns below, converge at bottom centre
-- Space columns at least 120px apart so arrows don't overlap
-- Leave 80px vertical gap between boxes for arrows and evidence text
-- Evidence text sits 10px below its box
-
-Be FAITHFUL to the brief. Use the exact labels from the brief verbatim.
-Output ONLY via the create_excalidraw_diagram tool. No prose.`;
+Rules:
+- Labels must be short (≤ 5 words). Use the exact words from the brief.
+- sublabel is optional — one short phrase describing the output or meaning of a step.
+- For fork: left = bad/wrong path (color "#f87171"), right = good/fix path (color "#4ade80").
+- For pipeline: each step can have an optional color (default "#8182C1").
+- Keep steps to 3–5 per column/pipeline. Do not invent steps not in the brief.
+- All labels lowercase.`;
 
 const TOOL = {
-  name: "create_excalidraw_diagram",
-  description:
-    "Emit a complete Excalidraw scene as a JSON string. The string must parse as a valid Excalidraw v2 scene with elements, appState, and files.",
+  name: "create_diagram_spec",
+  description: "Return a structured DiagramSpec that the builder will convert to an Excalidraw scene.",
   input_schema: {
     type: "object" as const,
     properties: {
-      excalidraw_json: {
+      spec: {
         type: "string",
-        description:
-          "Full Excalidraw scene JSON, stringified. Must be parseable by JSON.parse and follow the v2 schema described in the system prompt.",
-      },
-      design_notes: {
-        type: "string",
-        description:
-          "One short line describing the visual pattern chosen and why.",
+        description: "The DiagramSpec as a JSON string. Must parse to a valid DiagramSpec object.",
       },
     },
-    required: ["excalidraw_json"],
+    required: ["spec"],
   },
 };
 
@@ -140,14 +97,10 @@ export const generateExcalidraw = inngest.createFunction(
   async ({ event, step }) => {
     const { jobId, brief, format } = event.data;
 
-    // Step 1: Claude → Excalidraw JSON
+    // Step 1: Claude → DiagramSpec → Excalidraw scene (built programmatically)
     const scene = await step.run("call-claude", async () => {
       const key = await getAnthropicKey();
       const canvas = canvasFromFormat(format);
-      const system = SYSTEM_PROMPT.replace(
-        "{{CANVAS_WIDTH}}",
-        String(canvas.width)
-      ).replace("{{CANVAS_HEIGHT}}", String(canvas.height));
 
       const apiRes = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -157,11 +110,11 @@ export const generateExcalidraw = inngest.createFunction(
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 16384,
-          system,
+          model: "claude-haiku-4-5",
+          max_tokens: 2048,
+          system: SYSTEM_PROMPT,
           tools: [TOOL],
-          tool_choice: { type: "tool", name: "create_excalidraw_diagram" },
+          tool_choice: { type: "tool", name: "create_diagram_spec" },
           messages: [{ role: "user", content: brief }],
         }),
       });
@@ -174,21 +127,15 @@ export const generateExcalidraw = inngest.createFunction(
       const toolUse = (
         data.content as { type: string; name?: string; input?: unknown }[]
       )?.find(
-        (c) => c.type === "tool_use" && c.name === "create_excalidraw_diagram"
-      ) as { input?: { excalidraw_json?: string } } | undefined;
+        (c) => c.type === "tool_use" && c.name === "create_diagram_spec"
+      ) as { input?: { spec?: string } } | undefined;
 
-      if (!toolUse?.input?.excalidraw_json) {
-        throw new Error("Claude did not return an Excalidraw JSON tool call.");
+      if (!toolUse?.input?.spec) {
+        throw new Error("Claude did not return a diagram spec.");
       }
-      const parsed = JSON.parse(toolUse.input.excalidraw_json);
-      if (
-        !parsed ||
-        typeof parsed !== "object" ||
-        parsed.type !== "excalidraw"
-      ) {
-        throw new Error("Excalidraw JSON missing required type='excalidraw'.");
-      }
-      return parsed;
+
+      const spec = JSON.parse(toolUse.input.spec) as DiagramSpec;
+      return buildDiagram(spec, canvas.width, canvas.height);
     });
 
     // Step 2: persist result to Supabase

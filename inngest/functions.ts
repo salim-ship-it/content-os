@@ -2,70 +2,76 @@ import { inngest } from "@/lib/inngest";
 import { getSupabase } from "@/lib/supabase";
 import { promises as fs } from "fs";
 import path from "path";
-import { buildDiagram, type DiagramSpec, type DiagramNode, type DiagramEdge, type DiagramHeading } from "@/lib/diagram-builder";
+import { buildDiagram, type DiagramSpec } from "@/lib/diagram-builder";
 
 // Claude returns a DiagramSpec (structured JSON). The diagram-builder then
 // produces the Excalidraw scene programmatically — guaranteeing text renders.
 
-const SYSTEM_PROMPT = `You are a diagram designer. Given a brief, produce a node-graph spec via the create_diagram_spec tool.
+const SYSTEM_PROMPT = `You are a diagram designer. Given a brief, place nodes at exact x/y coordinates on a canvas and connect them with edges. Call the create_diagram_spec tool.
 
-You have a column grid. You decide everything: how many columns, where each node goes, what it says, colors, and which nodes connect.
+CANVAS: 0,0 is top-left. x goes right, y goes down. Both are 0–100 (percent of canvas size).
 
 SPEC FORMAT (strict JSON):
 {
-  "cols": 2,
-  "headings": [
-    { "col": 0, "label": "the wrong way", "sublabel": "what most people do", "color": "#f87171" },
-    { "col": 1, "label": "the fix", "sublabel": "what actually works", "color": "#4ade80" }
-  ],
   "nodes": [
-    { "id": "start", "label": "user signs up", "col": 0, "row": 0, "color": "#4ade80", "colspan": 2 },
-    { "id": "friction", "label": "hits learning curve", "sublabel": "no quick win", "stat": "day 3", "col": 0, "row": 1, "color": "#f87171" },
-    { "id": "win", "label": "first result delivered", "sublabel": "immediate value", "stat": "day 1", "col": 1, "row": 1, "color": "#4ade80" },
-    { "id": "end", "label": "they believe it works", "col": 0, "row": 3, "color": "#8182C1", "colspan": 2 }
+    { "id": "start", "label": "user signs up", "x": 50, "y": 10, "color": "#4ade80", "w": 45 },
+    { "id": "friction", "label": "hits learning curve", "sublabel": "no quick win", "stat": "day 3", "x": 25, "y": 40, "color": "#f87171" },
+    { "id": "win", "label": "first result delivered", "sublabel": "immediate value", "stat": "day 1", "x": 75, "y": 40, "color": "#4ade80" },
+    { "id": "end", "label": "they believe it works", "x": 50, "y": 75, "color": "#8182C1", "w": 45 }
   ],
   "edges": [
     { "from": "start", "to": "friction" },
     { "from": "start", "to": "win" },
     { "from": "friction", "to": "end" },
-    { "from": "win", "to": "end" }
+    { "from": "win", "to": "end" },
+    { "from": "friction", "to": "win", "label": "or pivot" }
   ]
 }
 
-FIELD RULES:
-- cols: 1–4. Choose based on the content — use 1 for a linear story, 2 for a contrast, 3+ for a system with parallel tracks.
-- headings: optional big column titles (use for contrasts or multi-track systems). Skip if content is linear.
-- node.id: unique, short, no spaces (use descriptive names like "friction", "win", "step1").
-- node.col: 0-indexed column (0 to cols-1).
-- node.row: 0-indexed row (start at 0, increment downward).
-- node.colspan: how many columns this box spans (default 1). Use colspan=cols for full-width boxes like a shared start or conclusion.
-- node.color: "#f87171" red (bad/wrong), "#4ade80" green (good/fix/result), "#8182C1" purple (neutral/process), "#fbbf24" yellow (warning/transition).
-- node.sublabel: one short phrase below the box (≤ 6 words). Use it to add meaning.
-- node.stat: a highlighted metric or marker (e.g. "80% churn", "day 3", "+40%"). Shows in the node's color.
-- edge.color: optional, defaults to periwinkle "#8182C1".
-- All label text lowercase.
-- Labels 3–6 words max. If the content is longer, compress it — pick the most important words.
+NODE FIELDS:
+- id: unique, short, no spaces (e.g. "start", "friction", "win").
+- label: 3–6 words, lowercase. The main text inside the box.
+- x: center of the node, 0–100 (percent of canvas width). 50 = centered horizontally.
+- y: center of the node, 0–100 (percent of canvas height). 10 = near top, 90 = near bottom.
+- w: optional width, 0–100 (percent of canvas width). Default auto-sized from text. Use ~45 for wide nodes that span roughly half the canvas.
+- color: "#f87171" red (bad/wrong/friction), "#4ade80" green (good/fix/result/win), "#8182C1" purple (neutral/process/system), "#fbbf24" yellow (warning/transition/pivot).
+- sublabel: optional short phrase below the box (≤ 6 words). Adds meaning or outcome.
+- stat: optional metric or marker (e.g. "80% churn", "day 3", "+40%"). Shown in node color.
+- shape: optional "box" (default) or "circle". Use circle for small hub/pivot nodes.
 
-LAYOUT GUIDANCE — pick what fits the post:
-- Contrast (wrong vs right, before vs after): 2 cols, shared top/bottom nodes with colspan=2, different steps in each col.
-- Linear process/journey: 1 col, nodes flow down.
-- System with 2–3 parallel tracks: 2–3 cols, headings for each track, nodes in rows.
-- Framework or breakdown: 2–3 cols, each col is a category, rows are items.
-- Loop/cycle: 1 col, nodes go down then edge back from last to first.
+EDGE FIELDS:
+- from, to: node ids.
+- color: optional, defaults to "#8182C1".
+- label: optional short word or phrase on the arrow (e.g. "or", "leads to", "day 7").
 
-Do NOT invent content. Only use ideas that are in the brief.`;
+POSITIONING RULES:
+- Space nodes so they don't overlap. Typical node height is ~8–12% of canvas; width is ~25–45%.
+- Keep y values at least 15 apart for nodes in the same vertical stack.
+- Keep x values at least 30 apart for nodes in the same horizontal row.
+- Use the full canvas height — spread nodes from y≈10 to y≈85.
+- Centered node: x=50. Left column: x≈22. Right column: x≈78. Three columns: x≈18, 50, 82.
+
+LAYOUT PATTERNS — choose what fits the post:
+- Linear story/process: single column, x=50 for all, y increments by ~20.
+- Contrast (wrong vs right): shared start at top (x=50, y=10), two paths diverge (x=25 and x=75), shared end at bottom (x=50, y=80).
+- Parallel tracks (2–3 systems): each track in its own column, rows align horizontally.
+- Hub and spokes: one central node, 3–5 satellite nodes arranged around it.
+- Loop/cycle: nodes in a circle or spiral, last edge loops back to first.
+- Any other shape the content calls for — you are not restricted to these patterns.
+
+Do NOT invent content. Only use ideas from the brief.`;
 
 
 
 const TOOL = {
   name: "create_diagram_spec",
-  description: "Return a node-graph DiagramSpec. The builder converts it to an Excalidraw scene — it handles all text sizing and positioning.",
+  description: "Return a node-graph DiagramSpec. The builder converts it to an Excalidraw scene — it handles all text sizing, wrapping, and arrow routing.",
   input_schema: {
     type: "object" as const,
     properties: {
       spec: {
         type: "string",
-        description: "JSON string with fields: cols (number), headings (optional array), nodes (array of {id,label,sublabel?,stat?,color,col,row,colspan?}), edges (array of {from,to,color?}).",
+        description: "JSON string with fields: nodes (array of {id,label,x,y,color,w?,sublabel?,stat?,shape?}), edges (array of {from,to,color?,label?}). x and y are 0–100 percent of canvas dimensions.",
       },
     },
     required: ["spec"],

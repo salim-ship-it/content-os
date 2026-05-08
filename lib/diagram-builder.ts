@@ -1,6 +1,6 @@
-// Programmatic Excalidraw builder — freeform node-graph on a column grid.
-// Claude returns a DiagramSpec (nodes + edges). This module computes all
-// geometry and produces valid Excalidraw v2 JSON with correct text dimensions.
+// Programmatic Excalidraw builder — free-position node graph.
+// Claude places nodes at x/y (% of canvas), picks shapes and colors.
+// This module handles all text sizing, wrapping, and arrow routing.
 
 let _seed = 1;
 function seed() { return ++_seed * 100003; }
@@ -42,6 +42,22 @@ function makeRect(
     seed: seed(), version: 1, versionNonce: 0,
     isDeleted: false, groupIds: [], boundElements: [], link: null, locked: false,
     roundness: { type: 3 },
+  };
+}
+
+function makeEllipse(
+  x: number, y: number, w: number, h: number,
+  strokeColor: string, fill = "transparent"
+) {
+  return {
+    id: id(), type: "ellipse",
+    x, y, width: w, height: h,
+    strokeColor, backgroundColor: fill,
+    fillStyle: "solid", strokeWidth: 2, strokeStyle: "dotted",
+    roughness: 2, opacity: 100, angle: 0,
+    seed: seed(), version: 1, versionNonce: 0,
+    isDeleted: false, groupIds: [], boundElements: [], link: null, locked: false,
+    roundness: { type: 2 },
   };
 }
 
@@ -105,27 +121,20 @@ export type DiagramNode = {
   sublabel?: string;
   stat?: string;
   color: string;
-  col: number;
-  row: number;
-  colspan?: number;
+  x: number;           // center x, 0–100 (% of canvas width)
+  y: number;           // center y, 0–100 (% of canvas height)
+  w?: number;          // optional width, 0–100 (% of canvas width). Default: auto from text.
+  shape?: "box" | "circle";  // default: box
 };
 
 export type DiagramEdge = {
   from: string;
   to: string;
   color?: string;
-};
-
-export type DiagramHeading = {
-  col: number;
-  label: string;
-  sublabel?: string;
-  color: string;
+  label?: string;
 };
 
 export type DiagramSpec = {
-  cols: number;
-  headings?: DiagramHeading[];
   nodes: DiagramNode[];
   edges: DiagramEdge[];
 };
@@ -139,142 +148,118 @@ export function buildDiagram(
 ): object {
   const elements: object[] = [];
 
-  const EDGE = 40;
-  const COL_GAP = 28;
-  const ROW_GAP = 28;
-  const TEXT_PAD = 14;
-  const BOX_H_MIN = 52;
   const LABEL_FONT = 16;
   const SUBLABEL_FONT = 11;
   const STAT_FONT = 13;
-  const HEADING_FONT = 26;
-  const SUBHEADING_FONT = 12;
+  const TEXT_PAD = 14;
+  const BOX_H_MIN = 52;
 
-  const cols = Math.max(1, Math.min(5, spec.cols || 1));
-  const colW = Math.floor((canvasW - 2 * EDGE - COL_GAP * (cols - 1)) / cols);
   const nodes = spec.nodes ?? [];
   const edges = spec.edges ?? [];
-  const headings = spec.headings ?? [];
 
-  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  // Per-node computed geometry
+  type NodeGeo = {
+    cx: number; cy: number;
+    w: number; h: number;
+    bx: number; by: number; // top-left of box
+    totalH: number; // box + sublabel/stat area
+  };
+  const geo = new Map<string, NodeGeo>();
 
-  // ── Column helpers ──
-  function nSpan(n: DiagramNode) { return Math.max(1, Math.min(cols - n.col, n.colspan ?? 1)); }
-  function nW(n: DiagramNode) { return nSpan(n) * colW + (nSpan(n) - 1) * COL_GAP; }
-  function nX(n: DiagramNode) { return EDGE + n.col * (colW + COL_GAP); }
-  function nCX(n: DiagramNode) { return nX(n) + nW(n) / 2; }
-  function nTextW(n: DiagramNode) { return nW(n) - TEXT_PAD * 2; }
-  function nBoxH(n: DiagramNode) {
-    const lines = wrapText(n.label, LABEL_FONT, nTextW(n));
-    return Math.max(BOX_H_MIN, textHeight(LABEL_FONT, lines.length) + TEXT_PAD * 2);
-  }
-  function nExtraH(n: DiagramNode) {
-    let h = 0;
-    if (n.sublabel) h += textHeight(SUBLABEL_FONT) + 8;
-    if (n.stat) h += textHeight(STAT_FONT) + 6;
-    return h;
-  }
-  function nTotalH(n: DiagramNode) { return nBoxH(n) + nExtraH(n) + 10; }
-
-  // ── Row heights ──
-  const maxRow = nodes.reduce((m, n) => Math.max(m, n.row ?? 0), 0);
-  const rowH: number[] = new Array(maxRow + 1).fill(BOX_H_MIN + 10);
   for (const n of nodes) {
-    const r = n.row ?? 0;
-    rowH[r] = Math.max(rowH[r], nTotalH(n));
+    const cx = (n.x / 100) * canvasW;
+    const cy = (n.y / 100) * canvasH;
+
+    // Width: explicit or auto-computed from text
+    const autoW = Math.min(
+      canvasW * 0.38,
+      Math.max(140, textWidth(n.label, LABEL_FONT) + TEXT_PAD * 2)
+    );
+    const w = n.w ? (n.w / 100) * canvasW : autoW;
+    const textMaxW = w - TEXT_PAD * 2;
+
+    const labelLines = wrapText(n.label, LABEL_FONT, textMaxW);
+    const labelH = textHeight(LABEL_FONT, labelLines.length);
+    const boxH = Math.max(BOX_H_MIN, labelH + TEXT_PAD * 2);
+
+    let extraH = 0;
+    if (n.sublabel) extraH += textHeight(SUBLABEL_FONT) + 8;
+    if (n.stat) extraH += textHeight(STAT_FONT) + 6;
+
+    geo.set(n.id, {
+      cx, cy,
+      w, h: boxH,
+      bx: cx - w / 2,
+      by: cy - boxH / 2,
+      totalH: boxH + extraH + 8,
+    });
   }
 
-  // ── Start Y (after headings) ──
-  let startY = 50;
-  if (headings.length > 0) {
-    const maxHH = headings.reduce((m, h) => {
-      const lines = wrapText(h.label, HEADING_FONT, colW);
-      return Math.max(m, textHeight(HEADING_FONT, lines.length) + (h.sublabel ? 26 : 8) + 20);
-    }, 60);
+  // Draw nodes
+  for (const n of nodes) {
+    const g = geo.get(n.id)!;
+    const { cx, cy, w, h, bx, by } = g;
+    const textMaxW = w - TEXT_PAD * 2;
+    const shape = n.shape ?? "box";
 
-    for (const h of headings) {
-      const hx = EDGE + (h.col ?? 0) * (colW + COL_GAP);
-      const hcx = hx + colW / 2;
-      let hy = startY;
-      elements.push(makeText(h.label, hcx, hy, HEADING_FONT, h.color, "center", colW));
-      hy += textHeight(HEADING_FONT, wrapText(h.label, HEADING_FONT, colW).length) + 4;
-      if (h.sublabel) {
-        elements.push(makeText(h.sublabel, hcx, hy, SUBHEADING_FONT, "#7a7580", "center", colW));
-      }
+    if (shape === "circle") {
+      elements.push(makeEllipse(bx, by, w, h, n.color));
+    } else {
+      elements.push(makeRect(bx, by, w, h, n.color));
     }
-    startY += maxHH;
-  }
+    elements.push(makeText(n.label, cx, cy, LABEL_FONT, "#f0edee", "center", textMaxW));
 
-  // ── Row Y positions ──
-  const rowY: number[] = [];
-  let y = startY;
-  for (let r = 0; r <= maxRow; r++) {
-    rowY.push(y);
-    y += rowH[r] + ROW_GAP;
-  }
-
-  // ── Draw nodes, track anchor points for edges ──
-  const anchorTop = new Map<string, number>();
-  const anchorBottom = new Map<string, number>();
-  const anchorLeft = new Map<string, number>();
-  const anchorRight = new Map<string, number>();
-  const anchorCY = new Map<string, number>();
-
-  for (const n of nodes) {
-    const r = n.row ?? 0;
-    const x = nX(n);
-    const w = nW(n);
-    const bh = nBoxH(n);
-    const ny = rowY[r];
-    const cx = nCX(n);
-
-    elements.push(makeRect(x, ny, w, bh, n.color));
-    elements.push(makeText(n.label, cx, ny + bh / 2, LABEL_FONT, "#f0edee", "center", nTextW(n)));
-
-    let ey = ny + bh + 8;
+    let ey = by + h + 8;
     if (n.sublabel) {
       elements.push(makeText(n.sublabel, cx, ey, SUBLABEL_FONT, "#7a7580", "center", w));
       ey += textHeight(SUBLABEL_FONT) + 6;
     }
     if (n.stat) {
       elements.push(makeText(n.stat, cx, ey, STAT_FONT, n.color, "center", w));
-      ey += textHeight(STAT_FONT) + 4;
     }
-
-    anchorTop.set(n.id, ny);
-    anchorBottom.set(n.id, ey - 2);
-    anchorLeft.set(n.id, x);
-    anchorRight.set(n.id, x + w);
-    anchorCY.set(n.id, ny + bh / 2);
   }
 
-  // ── Draw edges ──
+  // Draw edges with smart routing: pick nearest facing edges
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
   for (const e of edges) {
     const from = nodeMap.get(e.from);
     const to = nodeMap.get(e.to);
-    if (!from || !to) continue;
+    const fg = geo.get(e.from);
+    const tg = geo.get(e.to);
+    if (!from || !to || !fg || !tg) continue;
 
     const color = e.color ?? "#8182C1";
-    const fx = nCX(from);
-    const tx = nCX(to);
-    const fRow = from.row ?? 0;
-    const tRow = to.row ?? 0;
+    const dx = tg.cx - fg.cx;
+    const dy = tg.cy - fg.cy;
+    const angle = Math.atan2(dy, dx); // radians
 
-    if (fRow < tRow) {
-      // Down
-      elements.push(makeArrow(fx, anchorBottom.get(e.from)!, tx, anchorTop.get(e.to)!, color));
-    } else if (fRow > tRow) {
-      // Up (back-edge)
-      elements.push(makeArrow(fx, anchorTop.get(e.from)!, tx, anchorBottom.get(e.to)!, color));
-    } else {
-      // Same row — horizontal
-      const fCY = anchorCY.get(e.from)!;
-      const tCY = anchorCY.get(e.to)!;
-      if ((from.col ?? 0) < (to.col ?? 0)) {
-        elements.push(makeArrow(anchorRight.get(e.from)!, fCY, anchorLeft.get(e.to)!, tCY, color));
+    // Pick exit point on source box edge
+    function edgePoint(g: NodeGeo, outward: number): [number, number] {
+      const a = outward;
+      const halfW = g.w / 2;
+      const halfH = g.h / 2;
+      // Check which edge the angle hits
+      if (Math.abs(Math.tan(a)) < halfH / halfW) {
+        // Left or right edge
+        const side = Math.cos(a) > 0 ? 1 : -1;
+        return [g.cx + side * halfW, g.cy + Math.tan(a) * side * halfW];
       } else {
-        elements.push(makeArrow(anchorLeft.get(e.from)!, fCY, anchorRight.get(e.to)!, tCY, color));
+        // Top or bottom edge
+        const side = Math.sin(a) > 0 ? 1 : -1;
+        return [g.cx + (side * halfH) / Math.tan(a), g.cy + side * halfH];
       }
+    }
+
+    const [x1, y1] = edgePoint(fg, angle);
+    const [x2, y2] = edgePoint(tg, angle + Math.PI);
+
+    elements.push(makeArrow(x1, y1, x2, y2, color));
+
+    if (e.label) {
+      const mx = (x1 + x2) / 2;
+      const my = (y1 + y2) / 2;
+      elements.push(makeText(e.label, mx, my, 11, "#7a7580"));
     }
   }
 

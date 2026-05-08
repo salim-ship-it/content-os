@@ -140,7 +140,9 @@ function buildFork(
   elements.push(makeArrow(startCX, startBottomY, rightCX, y));
 
   // ── Steps ──
-  const maxSteps = Math.max(spec.left.steps.length, spec.right.steps.length);
+  const leftSteps = spec.left?.steps ?? [];
+  const rightSteps = spec.right?.steps ?? [];
+  const maxSteps = Math.max(leftSteps.length, rightSteps.length);
   const leftBoxBottomYs: number[] = [];
   const rightBoxBottomYs: number[] = [];
 
@@ -148,10 +150,10 @@ function buildFork(
     const stepY = y + i * ROW_GAP;
 
     // Left step
-    if (spec.left.steps[i]) {
-      const s = spec.left.steps[i];
+    if (leftSteps[i]) {
+      const s = leftSteps[i];
       const bx = leftCX - BOX_W / 2;
-      elements.push(makeRect(bx, stepY, BOX_W, BOX_H, spec.left.color));
+      elements.push(makeRect(bx, stepY, BOX_W, BOX_H, spec.left?.color ?? "#f87171"));
       elements.push(makeText(s.label, leftCX, stepY + BOX_H / 2, 18, "#f0edee"));
       if (s.sublabel) {
         elements.push(makeText(s.sublabel, leftCX, stepY + BOX_H + 16, 12, "#7a7580"));
@@ -163,10 +165,10 @@ function buildFork(
     }
 
     // Right step
-    if (spec.right.steps[i]) {
-      const s = spec.right.steps[i];
+    if (rightSteps[i]) {
+      const s = rightSteps[i];
       const bx = rightCX - BOX_W / 2;
-      elements.push(makeRect(bx, stepY, BOX_W, BOX_H, spec.right.color));
+      elements.push(makeRect(bx, stepY, BOX_W, BOX_H, spec.right?.color ?? "#4ade80"));
       elements.push(makeText(s.label, rightCX, stepY + BOX_H / 2, 18, "#f0edee"));
       if (s.sublabel) {
         elements.push(makeText(s.sublabel, rightCX, stepY + BOX_H + 16, 12, "#7a7580"));
@@ -203,15 +205,16 @@ function buildPipeline(
   canvasW: number,
 ) {
   const elements: ReturnType<typeof makeRect | typeof makeText | typeof makeArrow>[] = [];
-  const BOX_W = Math.min(220, (canvasW - 80) / spec.steps.length - 40);
+  const steps = spec.steps ?? [];
+  const BOX_W = Math.min(220, (canvasW - 80) / Math.max(1, steps.length) - 40);
   const BOX_H = 64;
   const GAP = 40;
-  const totalW = spec.steps.length * BOX_W + (spec.steps.length - 1) * GAP;
+  const totalW = steps.length * BOX_W + (steps.length - 1) * GAP;
   let x = (canvasW - totalW) / 2;
   const y = 200;
 
-  for (let i = 0; i < spec.steps.length; i++) {
-    const s = spec.steps[i];
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
     const color = s.color ?? "#8182C1";
     const cx = x + BOX_W / 2;
     elements.push(makeRect(x, y, BOX_W, BOX_H, color));
@@ -235,7 +238,8 @@ function buildTimeline(
   canvasW: number,
 ) {
   const elements: ReturnType<typeof makeRect | typeof makeText | typeof makeArrow>[] = [];
-  const n = spec.events.length;
+  const events = spec.events ?? [];
+  const n = events.length;
   const spacing = (canvasW - 80) / (n - 1 || 1);
   const lineY = 300;
   const startX = 40;
@@ -244,7 +248,7 @@ function buildTimeline(
   elements.push(makeArrow(startX, lineY, startX + spacing * (n - 1) + 20, lineY));
 
   for (let i = 0; i < n; i++) {
-    const ev = spec.events[i];
+    const ev = events[i];
     const cx = startX + i * spacing;
     const above = i % 2 === 0;
     const boxY = above ? lineY - 100 : lineY + 30;

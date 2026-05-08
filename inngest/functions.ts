@@ -9,20 +9,42 @@ import { buildDiagram, type DiagramSpec } from "@/lib/diagram-builder";
 
 const SYSTEM_PROMPT = `You are a diagram architect. Given a brief, return a DiagramSpec JSON object via the create_diagram_spec tool.
 
-Supported patterns:
-- "fork"     — one start splits into two contrasting paths, then converges
+Choose the pattern that best fits the brief:
+- "fork"     — one start box splits into two contrasting paths, then converges
 - "pipeline" — linear sequence of steps left-to-right
 - "timeline" — events along a time axis
 
-Choose the pattern that best fits the brief.
-
 Rules:
 - Labels must be short (≤ 5 words). Use the exact words from the brief.
-- sublabel is optional — one short phrase describing the output or meaning of a step.
+- sublabel is optional — one short phrase describing the output or meaning.
 - For fork: left = bad/wrong path (color "#f87171"), right = good/fix path (color "#4ade80").
 - For pipeline: each step can have an optional color (default "#8182C1").
-- Keep steps to 3–5 per column/pipeline. Do not invent steps not in the brief.
-- All labels lowercase.`;
+- Keep steps to 3–5 per column/pipeline.
+- All labels lowercase.
+
+EXACT JSON SCHEMAS — you must match one of these exactly:
+
+fork:
+{
+  "pattern": "fork",
+  "start": { "label": "short label", "sublabel": "optional" },
+  "left": { "heading": "bad path name", "color": "#f87171", "steps": [{ "label": "step 1" }, { "label": "step 2" }] },
+  "right": { "heading": "good path name", "color": "#4ade80", "steps": [{ "label": "step 1" }, { "label": "step 2" }] },
+  "end": { "label": "convergence label" }
+}
+
+pipeline:
+{
+  "pattern": "pipeline",
+  "steps": [{ "label": "step 1", "color": "#8182C1" }, { "label": "step 2" }]
+}
+
+timeline:
+{
+  "pattern": "timeline",
+  "events": [{ "label": "event 1", "marker": "day 1" }, { "label": "event 2" }]
+}`;
+
 
 const TOOL = {
   name: "create_diagram_spec",

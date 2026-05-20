@@ -35,6 +35,7 @@ export function Sidebar() {
   }, []);
 
   if (pathname === "/login") return null;
+  if (pathname?.startsWith("/onboarding")) return null;
 
   async function handleSignOut() {
     const supabase = getSupabaseBrowser();

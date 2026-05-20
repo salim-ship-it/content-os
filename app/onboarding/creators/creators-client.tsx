@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ContentLanguage, Industry, RecommendedCreator } from "@/lib/recommended-creators";
+import { dirFor, getDict, type OnboardingDict } from "@/lib/i18n-onboarding";
 
 type Step = "language" | "level" | "pick" | "paste";
 
@@ -100,6 +101,8 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
     () => filteredIndustries.find((i) => i.id === activeIndustry),
     [filteredIndustries, activeIndustry]
   );
+  const t = getDict(language);
+  const dir = dirFor(language);
 
   function chooseLanguage(lang: ContentLanguage) {
     setLanguage(lang);
@@ -119,7 +122,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
       return;
     }
     if (selected.length >= maxCreators) {
-      setError(`You can pick up to ${maxCreators} creators. Remove one to add another.`);
+      setError(t.errMaxCreators(maxCreators));
       return;
     }
     setSelected((prev) => [...prev, { name: c.name, url: c.url }]);
@@ -131,7 +134,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
 
   async function handleSubmitBeginner() {
     if (selected.length === 0) {
-      setError("Pick at least one creator to continue.");
+      setError(t.errPickAtLeastOne);
       return;
     }
     await save(selected);
@@ -148,11 +151,11 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
       cleaned.push({ name: nameFromUrl(normalized), url: normalized });
     }
     if (cleaned.length === 0) {
-      setError("Add at least one valid LinkedIn URL (https://www.linkedin.com/in/...).");
+      setError(t.errAddValidUrl);
       return;
     }
     if (cleaned.length > maxCreators) {
-      setError(`You can add up to ${maxCreators} creators.`);
+      setError(t.errMaxCreators(maxCreators));
       return;
     }
     await save(cleaned);
@@ -169,12 +172,12 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Could not save");
+        throw new Error(data.error ?? t.errCouldNotSave);
       }
       router.push("/onboarding/voice");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save");
+      setError(e instanceof Error ? e.message : t.errCouldNotSave);
     } finally {
       setSubmitting(false);
     }
@@ -183,23 +186,24 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
   // -- Step 1: Language ------------------------------------------------------
   if (step === "language") {
     return (
-      <Shell>
+      <Shell dir={dir}>
         <Header
-          title="What language will you create content in?"
-          subtitle="We'll surface creators in that language and tune your posts to it."
+          title={t.langTitle}
+          subtitle={t.langSubtitle}
           stepNumber={STEP_NUMBER.language}
+          t={t}
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
           <ChoiceCard
-            title="English"
-            body="I want to write and publish my LinkedIn posts in English."
-            cta="Continue in English"
+            title={t.langEnTitle}
+            body={t.langEnBody}
+            cta={t.langEnCta}
             onClick={() => chooseLanguage("en")}
           />
           <ChoiceCard
-            title="Arabic / العربية"
-            body="أريد إنشاء منشورات لينكدإن باللغة العربية."
-            cta="المتابعة بالعربية"
+            title={t.langArTitle}
+            body={t.langArBody}
+            cta={t.langArCta}
             onClick={() => chooseLanguage("ar")}
           />
         </div>
@@ -210,34 +214,34 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
   // -- Step 2: Beginner vs Experienced ---------------------------------------
   if (step === "level") {
     return (
-      <Shell>
+      <Shell dir={dir}>
         <Header
-          title="Pick the creators you'll learn from"
-          subtitle="We'll watch their posts daily and surface ideas in your inbox."
+          title={t.levelTitle}
+          subtitle={t.levelSubtitle}
           stepNumber={STEP_NUMBER.level}
+          t={t}
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
           <ChoiceCard
-            title="I'm new to LinkedIn"
-            body="See a recommended set of top creators, picked by industry. Pick up to 4."
-            cta="Show me recommendations"
+            title={t.beginnerTitle}
+            body={t.beginnerBody}
+            cta={t.beginnerCta}
             onClick={() => setStep("pick")}
           />
           <ChoiceCard
-            title="I already have favorites"
-            body={`Paste up to ${maxCreators} LinkedIn profile URLs of creators you follow.`}
-            cta="Paste my own list"
+            title={t.expertTitle}
+            body={t.expertBody(maxCreators)}
+            cta={t.expertCta}
             onClick={() => setStep("paste")}
           />
         </div>
-        <BackLink onClick={() => setStep("language")} />
+        <BackLink onClick={() => setStep("language")} label={t.back} />
         {existingUrls.length > 0 && (
           <p
             className="mt-6 text-xs"
             style={{ color: "var(--vl-text-muted)" }}
           >
-            You already follow {existingUrls.length} creator{existingUrls.length === 1 ? "" : "s"}.
-            Adding new ones won't remove them.
+            {t.alreadyFollow(existingUrls.length)}
           </p>
         )}
       </Shell>
@@ -247,11 +251,12 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
   // -- Step 2a: Beginner — recommended grid ----------------------------------
   if (step === "pick") {
     return (
-      <Shell>
+      <Shell dir={dir}>
         <Header
-          title="Pick up to 4 creators"
-          subtitle="Choose an industry, then tap a creator to add or remove."
+          title={t.pickTitle}
+          subtitle={t.pickSubtitle}
           stepNumber={STEP_NUMBER.pick}
+          t={t}
           right={
             <span
               className="text-xs px-3 py-1.5 rounded-full"
@@ -260,7 +265,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
                 color: remaining === 0 ? "var(--vl-accent)" : "var(--vl-text-muted)",
               }}
             >
-              {selected.length} / {maxCreators} picked
+              {t.pickedCounter(selected.length, maxCreators)}
             </span>
           }
         />
@@ -291,14 +296,13 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
               color: "var(--vl-text-muted)",
               opacity: 0.7,
             }}
-            title="We're adding more industries and creators soon."
           >
-            More industries & creators
+            {t.moreIndustries}
             <span
               className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded"
               style={{ color: "var(--vl-accent)", background: "var(--vl-accent-glow)" }}
             >
-              Soon
+              {t.soonBadge}
             </span>
           </span>
         </div>
@@ -318,7 +322,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
               color: "var(--vl-text-muted)",
             }}
           >
-            No recommended creators in this language yet. Go back and paste your own LinkedIn profile URLs instead.
+            {t.emptyLangCreators}
           </div>
         )}
 
@@ -383,7 +387,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
           })}
         </div>
 
-        <PostCountSelector value={postsPerCreator} onChange={setPostsPerCreator} />
+        <PostCountSelector value={postsPerCreator} onChange={setPostsPerCreator} t={t} />
 
         {error && (
           <p className="mt-4 text-sm" style={{ color: "#dc2626" }}>
@@ -394,7 +398,8 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
         <Footer
           onBack={() => setStep("level")}
           onNext={handleSubmitBeginner}
-          nextLabel={submitting ? "Saving…" : "Continue"}
+          backLabel={t.back}
+          nextLabel={submitting ? t.saving : t.continue_}
           nextDisabled={submitting || selected.length === 0}
         />
       </Shell>
@@ -403,11 +408,12 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
 
   // -- Step 2b: Experienced — paste URLs -------------------------------------
   return (
-    <Shell>
+    <Shell dir={dir}>
       <Header
-        title="Paste up to 4 LinkedIn profiles"
-        subtitle="Just the URL of each creator's profile (e.g. https://www.linkedin.com/in/justinwelsh)."
+        title={t.pasteTitle}
+        subtitle={t.pasteSubtitle}
         stepNumber={STEP_NUMBER.paste}
+        t={t}
       />
 
       <div className="space-y-3 mt-8">
@@ -417,7 +423,8 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
             type="text"
             value={row}
             onChange={(e) => updatePasteRow(i, e.target.value)}
-            placeholder={`https://www.linkedin.com/in/creator-${i + 1}`}
+            placeholder={t.pastePlaceholder(i + 1)}
+            dir="ltr"
             className="w-full px-4 py-3 rounded-lg text-sm"
             style={{
               border: "1px solid var(--vl-border)",
@@ -428,7 +435,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
         ))}
       </div>
 
-      <PostCountSelector value={postsPerCreator} onChange={setPostsPerCreator} />
+      <PostCountSelector value={postsPerCreator} onChange={setPostsPerCreator} t={t} />
 
       {error && (
         <p className="mt-4 text-sm" style={{ color: "#dc2626" }}>
@@ -439,7 +446,8 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
       <Footer
         onBack={() => setStep("level")}
         onNext={handleSubmitExperienced}
-        nextLabel={submitting ? "Saving…" : "Continue"}
+        backLabel={t.back}
+        nextLabel={submitting ? t.saving : t.continue_}
         nextDisabled={submitting}
       />
     </Shell>
@@ -449,9 +457,11 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
 function PostCountSelector({
   value,
   onChange,
+  t,
 }: {
   value: number;
   onChange: (n: number) => void;
+  t: OnboardingDict;
 }) {
   return (
     <div className="mt-8">
@@ -459,7 +469,7 @@ function PostCountSelector({
         className="text-[11px] uppercase tracking-[0.2em] mb-2"
         style={{ color: "var(--vl-text-muted)" }}
       >
-        Posts to scrape per creator
+        {t.postsPerCreatorLabel}
       </div>
       <div className="flex flex-wrap gap-2">
         {POST_COUNT_OPTIONS.map((n) => {
@@ -476,13 +486,13 @@ function PostCountSelector({
                 color: active ? "var(--vl-accent)" : "var(--vl-text-heading)",
               }}
             >
-              {n} posts
+              {t.postsCount(n)}
             </button>
           );
         })}
       </div>
       <p className="text-xs mt-2" style={{ color: "var(--vl-text-muted)" }}>
-        We'll start scraping right after you continue. New posts arrive 1× per day after that.
+        {t.postsPerCreatorHint}
       </p>
     </div>
   );
@@ -490,9 +500,10 @@ function PostCountSelector({
 
 // -- Layout helpers ----------------------------------------------------------
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, dir }: { children: React.ReactNode; dir: "rtl" | "ltr" }) {
   return (
     <div
+      dir={dir}
       className="min-h-screen flex items-start justify-center px-6 py-16"
       style={{ background: "var(--vl-bg)" }}
     >
@@ -506,11 +517,13 @@ function Header({
   subtitle,
   right,
   stepNumber,
+  t,
 }: {
   title: string;
   subtitle?: string;
   right?: React.ReactNode;
   stepNumber: number;
+  t: OnboardingDict;
 }) {
   return (
     <div className="flex items-start justify-between gap-4">
@@ -519,7 +532,7 @@ function Header({
           className="text-[11px] uppercase tracking-[0.2em] mb-3"
           style={{ color: "var(--vl-text-muted)" }}
         >
-          Onboarding · Step {stepNumber} of {TOTAL_STEPS}
+          {t.stepLabel(stepNumber, TOTAL_STEPS)}
         </div>
         <h1
           className="text-3xl font-bold"
@@ -542,7 +555,7 @@ function Header({
   );
 }
 
-function BackLink({ onClick }: { onClick: () => void }) {
+function BackLink({ onClick, label }: { onClick: () => void; label: string }) {
   return (
     <button
       type="button"
@@ -550,7 +563,7 @@ function BackLink({ onClick }: { onClick: () => void }) {
       className="mt-8 text-xs uppercase tracking-[0.18em] hover:opacity-70 transition-opacity"
       style={{ color: "var(--vl-text-muted)" }}
     >
-      ← Back
+      {label}
     </button>
   );
 }
@@ -600,11 +613,13 @@ function Footer({
   onNext,
   nextLabel,
   nextDisabled,
+  backLabel,
 }: {
   onBack: () => void;
   onNext: () => void;
   nextLabel: string;
   nextDisabled: boolean;
+  backLabel: string;
 }) {
   return (
     <div className="flex items-center justify-between mt-10 pt-6" style={{ borderTop: "1px solid var(--vl-border)" }}>
@@ -614,7 +629,7 @@ function Footer({
         className="text-xs uppercase tracking-[0.18em] hover:opacity-70 transition-opacity"
         style={{ color: "var(--vl-text-muted)" }}
       >
-        ← Back
+        {backLabel}
       </button>
       <button
         type="button"

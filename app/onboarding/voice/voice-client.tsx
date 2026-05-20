@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { VOICE_QUESTIONS } from "@/lib/voice-questions";
-import type { VoiceDraft, Answer, VoiceQuestion } from "@/lib/voice-questions";
+import { VOICE_QUESTIONS, localizeQuestion } from "@/lib/voice-questions";
+import type { VoiceDraft, Answer, LocalizedVoiceQuestion } from "@/lib/voice-questions";
 import type { Pillars } from "@/lib/pillars";
+import type { ContentLanguage } from "@/lib/recommended-creators";
+import { dirFor, getDict } from "@/lib/i18n-onboarding";
 
 const TOTAL = VOICE_QUESTIONS.length;
 
@@ -236,11 +238,12 @@ function PillarsView({ pillars }: { pillars: Pillars }) {
 /* ─── Multi-text input ─────────────────────────────────────────────── */
 
 function MultiTextInput({
-  question, selected, onUpdate,
+  options, selected, onUpdate, addOwnPlaceholder,
 }: {
-  question: VoiceQuestion;
+  options: string[] | undefined;
   selected: string[];
   onUpdate: (value: string[]) => void;
+  addOwnPlaceholder: string;
 }) {
   const [otherText, setOtherText] = useState("");
 
@@ -261,7 +264,7 @@ function MultiTextInput({
   return (
     <div>
       <div className="flex flex-wrap gap-2 mb-3">
-        {question.options?.map((option) => {
+        {options?.map((option) => {
           const isSelected = selected.includes(option);
           return (
             <button
@@ -286,7 +289,7 @@ function MultiTextInput({
         <input
           className="flex-1 rounded-lg border px-3 py-2 text-sm outline-none"
           style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)", background: "var(--vl-bg)" }}
-          placeholder="Add your own…"
+          placeholder={addOwnPlaceholder}
           value={otherText}
           onChange={(e) => setOtherText(e.target.value)}
           onKeyDown={(e) => {
@@ -558,11 +561,15 @@ export function VoiceOnboardingClient({
   initialDraft,
   initialProfile = null,
   initialPillars = null,
+  language = "en",
 }: {
   initialDraft: VoiceDraft;
   initialProfile?: string | null;
   initialPillars?: Pillars | null;
+  language?: ContentLanguage;
 }) {
+  const t = getDict(language);
+  const dir = dirFor(language);
   const [answers, setAnswers] = useState<Record<string, Answer>>(initialDraft.answers);
   const [step, setStep] = useState(initialProfile ? TOTAL : 0);
   const [generating, setGenerating] = useState(false);
@@ -609,10 +616,10 @@ export function VoiceOnboardingClient({
         if (data.pillars) setPillars(data.pillars);
         setSaved(true);
       } else {
-        setError(data.error || "Generation failed");
+        setError(data.error || t.errGenerationFailed);
       }
     } catch {
-      setError("Network error during generation");
+      setError(t.errNetwork);
     } finally {
       setGenerating(false);
     }
@@ -631,6 +638,7 @@ export function VoiceOnboardingClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, answers]);
 
+  const localized = question ? localizeQuestion(question, language) : null;
   const currentAnswer = question ? answers[question.id] : undefined;
   const hasAnswer = currentAnswer !== undefined && currentAnswer !== "" &&
     !(Array.isArray(currentAnswer) && currentAnswer.length === 0);
@@ -638,7 +646,7 @@ export function VoiceOnboardingClient({
   /* ─── Render input ──────────────────────────────────────── */
 
   function renderInput() {
-    if (!question) return null;
+    if (!question || !localized) return null;
     switch (question.type) {
       case "long-text":
         return (
@@ -652,7 +660,7 @@ export function VoiceOnboardingClient({
               lineHeight: 1.55,
             }}
             rows={6}
-            placeholder="Type your answer…"
+            placeholder={t.inputPlaceholder}
             value={(currentAnswer as string) || ""}
             onChange={(e) => setAnswer(question.id, e.target.value)}
             autoFocus
@@ -670,7 +678,7 @@ export function VoiceOnboardingClient({
               color: "var(--vl-text-heading)",
               background: "var(--vl-bg)",
             }}
-            placeholder="Type your answer…"
+            placeholder={t.inputPlaceholder}
             value={(currentAnswer as string) || ""}
             onChange={(e) => setAnswer(question.id, e.target.value)}
             autoFocus
@@ -682,7 +690,7 @@ export function VoiceOnboardingClient({
       case "single":
         return (
           <div className="flex flex-col gap-2.5">
-            {question.options?.map((option) => {
+            {localized.options?.map((option) => {
               const selected = currentAnswer === option;
               return (
                 <button
@@ -706,7 +714,14 @@ export function VoiceOnboardingClient({
 
       case "multi-text": {
         const selected = Array.isArray(currentAnswer) ? currentAnswer : [];
-        return <MultiTextInput question={question} selected={selected} onUpdate={(v) => setAnswer(question.id, v)} />;
+        return (
+          <MultiTextInput
+            options={localized.options}
+            selected={selected}
+            onUpdate={(v) => setAnswer(question.id, v)}
+            addOwnPlaceholder={t.inputPlaceholder}
+          />
+        );
       }
 
       default:
@@ -718,16 +733,16 @@ export function VoiceOnboardingClient({
 
   if (profile) {
     return (
-      <div className="min-h-full">
+      <div dir={dir} className="min-h-full">
         {/* Sticky action header */}
         <div className="sticky top-0 z-20 -mx-10 px-10 py-3 border-b backdrop-blur" style={{ borderColor: "var(--vl-border)", background: "color-mix(in srgb, var(--vl-bg) 85%, transparent)" }}>
           <div className="max-w-3xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-full" style={{ background: "var(--vl-accent-glow)", color: "var(--vl-accent)" }}>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--vl-accent)" }} />
-                Voice profile generated
+                {t.profileGenerated}
               </span>
-              {saved && <span className="text-[12.5px]" style={{ color: "#16a34a" }}>✓ Saved</span>}
+              {saved && <span className="text-[12.5px]" style={{ color: "#16a34a" }}>{t.saved}</span>}
             </div>
             <div className="flex items-center gap-1">
               <button
@@ -736,21 +751,21 @@ export function VoiceOnboardingClient({
                 className="px-3 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors"
                 style={{ color: "var(--vl-text-muted)" }}
               >
-                {generating ? "Regenerating…" : "Regenerate"}
+                {generating ? t.regenerating : t.regenerate}
               </button>
               <button
                 onClick={() => { setProfile(null); setPillars(null); setSaved(false); setStep(0); }}
                 className="px-3 py-1.5 rounded-lg text-[12.5px] font-medium transition-colors"
                 style={{ color: "var(--vl-text-muted)" }}
               >
-                Edit answers
+                {t.editAnswers}
               </button>
               <a
                 href="/"
                 className="ml-2 px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-all"
                 style={{ background: "var(--vl-text-heading)", color: "#fff" }}
               >
-                Back to home →
+                {t.backHome}
               </a>
             </div>
           </div>
@@ -768,7 +783,7 @@ export function VoiceOnboardingClient({
 
           <div className="mt-12 pt-8 border-t flex items-center justify-between" style={{ borderColor: "var(--vl-border)" }}>
             <span className="text-[12.5px]" style={{ color: "var(--vl-text-muted)" }}>
-              {saved ? "✓ Saved to your profile" : ""}
+              {saved ? t.savedToProfile : ""}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -777,21 +792,21 @@ export function VoiceOnboardingClient({
                 className="px-4 py-2 rounded-lg text-sm font-medium"
                 style={{ background: "var(--vl-bg-card)", color: "var(--vl-text)", border: "1px solid var(--vl-border)" }}
               >
-                {generating ? "Regenerating…" : "Regenerate"}
+                {generating ? t.regenerating : t.regenerate}
               </button>
               <button
                 onClick={() => { setProfile(null); setPillars(null); setSaved(false); setStep(0); }}
                 className="px-4 py-2 rounded-lg text-sm font-medium"
                 style={{ background: "var(--vl-bg-card)", color: "var(--vl-text)", border: "1px solid var(--vl-border)" }}
               >
-                Edit answers
+                {t.editAnswers}
               </button>
               <a
                 href="/"
                 className="px-5 py-2 rounded-lg text-sm font-semibold"
                 style={{ background: "var(--vl-text-heading)", color: "#fff" }}
               >
-                Back to home →
+                {t.backHome}
               </a>
             </div>
           </div>
@@ -807,7 +822,7 @@ export function VoiceOnboardingClient({
   if (isComplete) {
     return (
       <>
-        <div className="min-h-full flex items-center justify-center px-4 py-12">
+        <div dir={dir} className="min-h-full flex items-center justify-center px-4 py-12">
           <div className="w-full max-w-xl text-center">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-full mb-5" style={{ background: "var(--vl-accent-glow)" }}>
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--vl-accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -815,13 +830,13 @@ export function VoiceOnboardingClient({
               </svg>
             </div>
             <div className="text-[11px] uppercase tracking-[0.22em] mb-2" style={{ color: "var(--vl-accent)" }}>
-              Voice profile
+              {t.voiceBadge}
             </div>
             <h2 className="text-2xl font-bold mb-2" style={{ color: "var(--vl-text-heading)" }}>
-              All questions answered
+              {t.finalTitle}
             </h2>
             <p className="text-sm mb-6" style={{ color: "var(--vl-text-muted)" }}>
-              Ready to generate your voice profile from your answers.
+              {t.finalSubtitle}
             </p>
             {error && (
               <div className="text-sm mb-4 px-4 py-2 rounded-lg" style={{ background: "#fef2f2", color: "#dc2626" }}>
@@ -834,7 +849,7 @@ export function VoiceOnboardingClient({
                 className="px-5 py-3 rounded-xl text-sm font-medium"
                 style={{ background: "var(--vl-bg-card)", color: "var(--vl-text)", border: "1px solid var(--vl-border)" }}
               >
-                Back
+                {t.back}
               </button>
               <button
                 onClick={handleGenerate}
@@ -842,7 +857,7 @@ export function VoiceOnboardingClient({
                 className="px-6 py-3 rounded-xl text-sm font-semibold transition-all"
                 style={{ background: "var(--vl-text-heading)", color: "#fff", opacity: generating ? 0.6 : 1 }}
               >
-                {generating ? "Generating…" : "Generate voice profile →"}
+                {generating ? t.generating : t.generate}
               </button>
             </div>
           </div>
@@ -857,16 +872,16 @@ export function VoiceOnboardingClient({
   const progress = ((step + 1) / TOTAL) * 100;
 
   return (
-    <div className="min-h-full flex items-center justify-center px-4 py-10">
+    <div dir={dir} className="min-h-full flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-2xl">
         {/* Card header — slim progress + counter */}
         <div className="mb-5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] uppercase tracking-[0.2em] font-semibold" style={{ color: "var(--vl-accent)" }}>
-              Voice profile
+              {t.voiceBadge}
             </span>
             <span className="text-[12px] font-medium" style={{ color: "var(--vl-text-muted)" }}>
-              Question {step + 1} of {TOTAL}
+              {t.questionCounter(step + 1, TOTAL)}
             </span>
           </div>
           <div className="relative h-[3px] rounded-full overflow-hidden" style={{ background: "var(--vl-border)" }}>
@@ -889,7 +904,7 @@ export function VoiceOnboardingClient({
           }}
         >
           <h2 className="text-2xl font-bold leading-snug mb-6 tracking-tight" style={{ color: "var(--vl-text-heading)", fontFamily: "var(--font-space-grotesk), sans-serif" }}>
-            {question!.question}
+            {localized!.question}
           </h2>
 
           <div className="mb-7">{renderInput()}</div>
@@ -902,12 +917,12 @@ export function VoiceOnboardingClient({
               className="px-3 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               style={{ color: "var(--vl-text-muted)" }}
             >
-              ← Back
+              {t.back}
             </button>
             <div className="flex items-center gap-2 text-[11.5px]" style={{ color: "var(--vl-text-muted)" }}>
               <kbd className="px-1.5 py-0.5 rounded text-[10px] font-medium border" style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)" }}>⌘</kbd>
               <kbd className="px-1.5 py-0.5 rounded text-[10px] font-medium border" style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)" }}>Enter</kbd>
-              <span>to continue</span>
+              <span>{t.cmdEnterHint}</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -915,7 +930,7 @@ export function VoiceOnboardingClient({
                 className="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
                 style={{ color: "var(--vl-text-muted)" }}
               >
-                Skip
+                {t.skip}
               </button>
               <button
                 onClick={next}
@@ -926,7 +941,7 @@ export function VoiceOnboardingClient({
                   color: hasAnswer ? "#fff" : "var(--vl-text-muted)",
                 }}
               >
-                {step === TOTAL - 1 ? "Finish →" : "Next →"}
+                {step === TOTAL - 1 ? t.finish : t.next}
               </button>
             </div>
           </div>

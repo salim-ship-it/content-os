@@ -2,9 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Industry, RecommendedCreator } from "@/lib/recommended-creators";
+import type { ContentLanguage, Industry, RecommendedCreator } from "@/lib/recommended-creators";
 
-type Step = "level" | "pick" | "paste";
+type Step = "language" | "level" | "pick" | "paste";
+
+const TOTAL_STEPS = 3;
+const STEP_NUMBER: Record<Step, number> = {
+  language: 1,
+  level: 2,
+  pick: 2,
+  paste: 2,
+};
 
 const POST_COUNT_OPTIONS = [10, 20, 50, 100] as const;
 const DEFAULT_POST_COUNT = 20;
@@ -70,7 +78,16 @@ function primaryAvatarUrl(c: { name: string; url: string; image?: string }): str
 
 export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls }: Props) {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("level");
+  const [step, setStep] = useState<Step>("language");
+  const [language, setLanguage] = useState<ContentLanguage>("en");
+  const filteredIndustries = useMemo(
+    () =>
+      industries.map((i) => ({
+        ...i,
+        creators: i.creators.filter((c) => (c.language ?? "en") === language),
+      })),
+    [industries, language]
+  );
   const [activeIndustry, setActiveIndustry] = useState<string>(industries[0]?.id ?? "");
   const [selected, setSelected] = useState<SelectedCreator[]>([]);
   const [pasteRows, setPasteRows] = useState<string[]>(["", "", "", ""]);
@@ -80,9 +97,16 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
 
   const remaining = Math.max(0, maxCreators - selected.length);
   const industry = useMemo(
-    () => industries.find((i) => i.id === activeIndustry),
-    [industries, activeIndustry]
+    () => filteredIndustries.find((i) => i.id === activeIndustry),
+    [filteredIndustries, activeIndustry]
   );
+
+  function chooseLanguage(lang: ContentLanguage) {
+    setLanguage(lang);
+    setSelected([]);
+    setError(null);
+    setStep("level");
+  }
 
   function isSelected(url: string) {
     return selected.some((c) => c.url === url);
@@ -141,7 +165,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
       const res = await fetch("/api/onboarding/creators", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ creators, postsPerCreator }),
+        body: JSON.stringify({ creators, postsPerCreator, language }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -156,13 +180,41 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
     }
   }
 
-  // -- Step 1: Beginner vs Experienced ---------------------------------------
+  // -- Step 1: Language ------------------------------------------------------
+  if (step === "language") {
+    return (
+      <Shell>
+        <Header
+          title="What language will you create content in?"
+          subtitle="We'll surface creators in that language and tune your posts to it."
+          stepNumber={STEP_NUMBER.language}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+          <ChoiceCard
+            title="English"
+            body="I want to write and publish my LinkedIn posts in English."
+            cta="Continue in English"
+            onClick={() => chooseLanguage("en")}
+          />
+          <ChoiceCard
+            title="Arabic / العربية"
+            body="أريد إنشاء منشورات لينكدإن باللغة العربية."
+            cta="المتابعة بالعربية"
+            onClick={() => chooseLanguage("ar")}
+          />
+        </div>
+      </Shell>
+    );
+  }
+
+  // -- Step 2: Beginner vs Experienced ---------------------------------------
   if (step === "level") {
     return (
       <Shell>
         <Header
           title="Pick the creators you'll learn from"
           subtitle="We'll watch their posts daily and surface ideas in your inbox."
+          stepNumber={STEP_NUMBER.level}
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
           <ChoiceCard
@@ -178,6 +230,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
             onClick={() => setStep("paste")}
           />
         </div>
+        <BackLink onClick={() => setStep("language")} />
         {existingUrls.length > 0 && (
           <p
             className="mt-6 text-xs"
@@ -198,6 +251,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
         <Header
           title="Pick up to 4 creators"
           subtitle="Choose an industry, then tap a creator to add or remove."
+          stepNumber={STEP_NUMBER.pick}
           right={
             <span
               className="text-xs px-3 py-1.5 rounded-full"
@@ -212,7 +266,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
         />
 
         <div className="flex flex-wrap gap-2 mt-6">
-          {industries.map((i) => {
+          {filteredIndustries.map((i) => {
             const active = i.id === activeIndustry;
             return (
               <button
@@ -253,6 +307,19 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
           <p className="mt-4 text-sm" style={{ color: "var(--vl-text-muted)" }}>
             {industry.description}
           </p>
+        )}
+
+        {industry && industry.creators.length === 0 && (
+          <div
+            className="mt-6 p-6 rounded-xl text-sm"
+            style={{
+              border: "1px dashed var(--vl-border)",
+              background: "var(--vl-bg-card)",
+              color: "var(--vl-text-muted)",
+            }}
+          >
+            No recommended creators in this language yet. Go back and paste your own LinkedIn profile URLs instead.
+          </div>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-6">
@@ -340,6 +407,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
       <Header
         title="Paste up to 4 LinkedIn profiles"
         subtitle="Just the URL of each creator's profile (e.g. https://www.linkedin.com/in/justinwelsh)."
+        stepNumber={STEP_NUMBER.paste}
       />
 
       <div className="space-y-3 mt-8">
@@ -437,10 +505,12 @@ function Header({
   title,
   subtitle,
   right,
+  stepNumber,
 }: {
   title: string;
   subtitle?: string;
   right?: React.ReactNode;
+  stepNumber: number;
 }) {
   return (
     <div className="flex items-start justify-between gap-4">
@@ -449,7 +519,7 @@ function Header({
           className="text-[11px] uppercase tracking-[0.2em] mb-3"
           style={{ color: "var(--vl-text-muted)" }}
         >
-          Onboarding · Step 1 of 2
+          Onboarding · Step {stepNumber} of {TOTAL_STEPS}
         </div>
         <h1
           className="text-3xl font-bold"
@@ -469,6 +539,19 @@ function Header({
       </div>
       {right}
     </div>
+  );
+}
+
+function BackLink({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-8 text-xs uppercase tracking-[0.18em] hover:opacity-70 transition-opacity"
+      style={{ color: "var(--vl-text-muted)" }}
+    >
+      ← Back
+    </button>
   );
 }
 

@@ -25,17 +25,27 @@ export function Sidebar() {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [languagePicked, setLanguagePicked] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved === "true") setCollapsed(true);
+      if (sessionStorage.getItem("vl.onboarding.languagePicked") === "true") {
+        setLanguagePicked(true);
+      }
     } catch {}
+    function onPick() { setLanguagePicked(true); }
+    window.addEventListener("vl:language-picked", onPick);
+    return () => window.removeEventListener("vl:language-picked", onPick);
   }, []);
 
   if (pathname === "/login") return null;
-  if (pathname?.startsWith("/onboarding")) return null;
+  // On the language-picker page, hide the sidebar until the user has chosen
+  // a language so it's not competing with the picker for attention.
+  const onLanguageGate = pathname === "/onboarding/creators";
+  if (onLanguageGate && (!mounted || !languagePicked)) return null;
 
   async function handleSignOut() {
     const supabase = getSupabaseBrowser();

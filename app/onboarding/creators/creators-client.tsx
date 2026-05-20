@@ -108,6 +108,10 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
     setLanguage(lang);
     setSelected([]);
     setError(null);
+    try {
+      sessionStorage.setItem("vl.onboarding.languagePicked", "true");
+      window.dispatchEvent(new Event("vl:language-picked"));
+    } catch {}
     setStep("level");
   }
 

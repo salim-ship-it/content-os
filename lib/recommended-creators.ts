@@ -1,8 +1,11 @@
+export type ContentLanguage = "en" | "ar";
+
 export type RecommendedCreator = {
   name: string;
   url: string;
   image?: string;
   note?: string;
+  language?: ContentLanguage;
 };
 
 export type Industry = {
@@ -117,4 +120,11 @@ export const MAX_CREATORS_PER_USER = 4;
 
 export function findIndustry(id: string): Industry | undefined {
   return INDUSTRIES.find((i) => i.id === id);
+}
+
+export function industriesForLanguage(language: ContentLanguage): Industry[] {
+  return INDUSTRIES.map((i) => ({
+    ...i,
+    creators: i.creators.filter((c) => (c.language ?? "en") === language),
+  }));
 }

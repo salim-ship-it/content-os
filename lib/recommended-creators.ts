@@ -29,6 +29,8 @@ export const INDUSTRIES: Industry[] = [
       { name: "Tima Elhajj", url: "https://www.linkedin.com/in/timaelhajj/", image: "/creators/timaelhajj.jpg" },
       { name: "Justin Welsh", url: "https://www.linkedin.com/in/justinwelsh/", image: "/creators/justinwelsh.jpg" },
       { name: "Paolo Trivellato", url: "https://www.linkedin.com/in/leadgenwiz/", image: "/creators/leadgenwiz.jpg" },
+      { name: "Khaled Elahmad", url: "https://www.linkedin.com/in/khaledelahmad/", language: "ar" },
+      { name: "Jude Al Saleh", url: "https://www.linkedin.com/in/judealsaleh/", language: "ar" },
     ],
   },
   {

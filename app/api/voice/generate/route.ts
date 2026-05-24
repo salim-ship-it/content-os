@@ -10,6 +10,7 @@ import {
   writePillarsMarkdown,
 } from "@/lib/pillars";
 import { claudeFetch } from "@/lib/claude-fetch";
+import { getUserLanguage } from "@/lib/get-user-language";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -47,7 +48,9 @@ export async function POST() {
     return `**${q.question}**\n${formatted}`;
   }).join("\n\n");
 
-  const systemPrompt = `You are a voice profile synthesizer for a LinkedIn content system. You will receive answers to 12 voice discovery questions. Your job is to synthesize these into a structured voice profile in markdown format.
+  const language = await getUserLanguage();
+
+  const systemPromptEn = `You are a voice profile synthesizer for a LinkedIn content system. You will receive answers to 12 voice discovery questions. Your job is to synthesize these into a structured voice profile in markdown format.
 
 The profile must have these sections:
 1. **Identity** — Who they are, what they do, their positioning
@@ -62,6 +65,28 @@ The profile must have these sections:
 
 Be specific and actionable. Use their actual words where possible. This profile will be used by an AI to write LinkedIn posts in their voice.`;
 
+  const systemPromptAr = `أنت مُولِّد ملف صوت لنظام محتوى لينكدإن باللغة العربية. ستتلقى إجابات على 12 سؤالًا لاكتشاف الصوت. مهمتك تركيب هذه الإجابات في ملف صوت منظّم بصيغة Markdown.
+
+اكتب الملف بالكامل باللغة العربية الفصحى الواضحة. كل العناوين والمحتوى يجب أن تكون بالعربية.
+
+يجب أن يحتوي الملف على هذه الأقسام (استخدم العناوين العربية كما هي):
+1. **الهوية** — من هم، ماذا يفعلون، تموضعهم
+2. **المعتقدات الأساسية** — ما يعتقدون أن أغلب الناس يخطئون فيه، آراؤهم المعاكسة
+3. **قصة الأصل** — اللحظة (أو اللحظات) المحورية التي شكّلت نهجهم
+4. **آليات الصوت** — إيقاع الجمل، أسلوب الفقرات، سجل المفردات
+5. **الممنوعات الصارمة** — العبارات والأنماط التي يرفضون استخدامها
+6. **الجمهور** — لمن يكتبون، من قارئهم المثالي
+7. **معايرة النبرة** — الفكاهة، الشتائم، مستوى الرسمية، كيف يختمون منشوراتهم
+8. **خط الأساس "كأنك على قهوة"** — كيف يتحدثون طبيعيًا عن عملهم (أصدق عيّنة من الصوت)
+9. **ملاحظات التطبيق** — قواعد عملية لكاتب الأشباح المعتمد على الذكاء الاصطناعي ليتبعها عند الكتابة بهذا الصوت
+
+كن محددًا وقابلًا للتطبيق. استخدم كلماتهم الفعلية حيثما أمكن. سيُستخدم هذا الملف من قِبل الذكاء الاصطناعي لكتابة منشورات لينكدإن بصوتهم.`;
+
+  const systemPrompt = language === "ar" ? systemPromptAr : systemPromptEn;
+  const userPrompt = language === "ar"
+    ? `إليك الإجابات على 12 سؤالًا لاكتشاف الصوت:\n\n${answersSummary}\n\nركّب هذه في ملف صوت كامل بالعربية.`
+    : `Here are the answers to the 12 voice discovery questions:\n\n${answersSummary}\n\nSynthesize these into a complete voice profile.`;
+
   const response = await claudeFetch(apiKey, {
     model: "claude-haiku-4-5",
     max_tokens: 4096,
@@ -69,7 +94,7 @@ Be specific and actionable. Use their actual words where possible. This profile 
     messages: [
       {
         role: "user",
-        content: `Here are the answers to the 12 voice discovery questions:\n\n${answersSummary}\n\nSynthesize these into a complete voice profile.`,
+        content: userPrompt,
       },
     ],
   });
@@ -89,7 +114,7 @@ Be specific and actionable. Use their actual words where possible. This profile 
   let pillarsError: string | null = null;
   try {
     const onboarding = await readOnboarding(userId);
-    pillars = await generatePillars(draft, onboarding, apiKey);
+    pillars = await generatePillars(draft, onboarding, apiKey, language);
     await writePillars(userId, pillars);
     const md = renderPillarsMarkdown(onboarding?.name ?? "Unknown", pillars);
     await writePillarsMarkdown(userId, md);

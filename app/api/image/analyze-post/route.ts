@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   const apiKey = await getApiKey();
   const language = await getUserLanguage();
   const system = language === "ar"
-    ? `أنت خبير في تصميم المخططات البصرية. عند تحليل منشور لينكدإن، اكتب وصفًا بصريًا باللغة العربية يخبر مولّد المخططات بما يجب رسمه تمامًا.\n\n${SYSTEM}\n\nاكتب الوصف بالعربية.`
+    ? `أنت بتصمم مخططات بصرية. خذ منشور لينكدإن واكتب وصف بصري يقول لمولّد المخططات شو يرسم بالظبط.\n\nاكتب الوصف بالعربي السهل اللي أي عربي يفهمه — مش فصحى ثقيلة ومش ترجمة حرفية. خليه طبيعي مباشر زي ما بتحكي.\n\n${SYSTEM}`
     : SYSTEM;
   const response = await claudeFetch(apiKey, {
     model: "claude-haiku-4-5",

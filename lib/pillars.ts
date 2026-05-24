@@ -135,7 +135,7 @@ ${JSON.stringify(onboarding ?? { name: "Unknown" }, null, 2)}
 Generate the content pillars JSON now.`;
 
   const system = language === "ar"
-    ? `## CRITICAL LANGUAGE RULE\nاكتب كل قيم النصوص في JSON الناتج باللغة العربية الفصحى الواضحة (الأسماء، الأوصاف، الأهداف، الزوايا، الأفكار، الدعوات للفعل). أبقِ مفاتيح JSON والقيم المُعدّدة (مثل what_i_do, my_edge, who_i_am) بالإنجليزية كما هي.\n\n${SYSTEM_PROMPT}`
+    ? `## قاعدة اللغة (مهم جدًا)\nكل قيم النصوص في الـ JSON الناتج لازم تكون بالعربي السهل اللي أي عربي يفهمه — مش فصحى ثقيلة، مش ترجمة كلمة بكلمة من الإنجليزي، مش كلمات قديمة. اكتب زي ما تحكي ع القهوة: جمل قصيرة، كلمات عادية، مباشر.\n\nهاد ينطبق على: الأسماء (name)، الأوصاف (description)، الأهداف (purposes)، الزوايا (angle)، الفئات (category)، الأفكار (ideas)، والدعوات للفعل (ctas).\n\nخلّي مفاتيح JSON والقيم الثابتة (مثل what_i_do, my_edge, who_i_am) بالإنجليزي كما هي — لأنها مفاتيح برمجية مش نصوص للقارئ.\n\n${SYSTEM_PROMPT}`
     : SYSTEM_PROMPT;
 
   const res = await claudeFetch(apiKey, {

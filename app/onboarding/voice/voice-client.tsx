@@ -310,14 +310,25 @@ function MultiTextInput({
 
 /* ─── Building loader ──────────────────────────────────────────────── */
 
-function BuildingLoader() {
-  const STEPS = [
-    "Reading your answers…",
-    "Detecting sentence rhythm…",
-    "Extracting signature phrases…",
-    "Drafting your voice profile…",
-    "Generating your content pillars…",
-  ];
+function BuildingLoader({ language = "en" }: { language?: "en" | "ar" }) {
+  const isAr = language === "ar";
+  const STEPS = isAr
+    ? [
+        "عم نقرا جواباتك…",
+        "عم نلتقط إيقاع جملك…",
+        "عم نطلّع عباراتك المميزة…",
+        "عم نكتب ملف صوتك…",
+        "عم نطلّع محاور المحتوى…",
+      ]
+    : [
+        "Reading your answers…",
+        "Detecting sentence rhythm…",
+        "Extracting signature phrases…",
+        "Drafting your voice profile…",
+        "Generating your content pillars…",
+      ];
+  const title = isAr ? "عم نبني ملف صوتك…" : "Building your voice profile…";
+  const subtitle = isAr ? "هاد عادةً بياخد ١٥-٣٠ ثانية." : "This usually takes 15–30 seconds.";
   const [active, setActive] = useState(0);
 
   useEffect(() => {
@@ -339,10 +350,10 @@ function BuildingLoader() {
         }}
       >
         <h2 className="text-xl font-bold mb-1" style={{ color: "var(--vl-text-heading)" }}>
-          Building your voice profile…
+          {title}
         </h2>
         <p className="text-sm mb-5" style={{ color: "var(--vl-text-muted)" }}>
-          This usually takes 15–30 seconds.
+          {subtitle}
         </p>
 
         <div className="relative h-[3px] rounded-full overflow-hidden mb-5" style={{ background: "var(--vl-border)" }}>
@@ -812,7 +823,7 @@ export function VoiceOnboardingClient({
           </div>
         </div>
 
-        {generating && <BuildingLoader />}
+        {generating && <BuildingLoader language={language} />}
       </div>
     );
   }
@@ -862,7 +873,7 @@ export function VoiceOnboardingClient({
             </div>
           </div>
         </div>
-        {generating && <BuildingLoader />}
+        {generating && <BuildingLoader language={language} />}
       </>
     );
   }

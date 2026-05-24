@@ -5,6 +5,7 @@ import { getSupabase } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth";
 import { REPO_ROOT, VOICE_PROFILE_PATH, POST_FORMATS_PATH, CREATOR_STYLES_DIR } from "@/lib/paths";
 import { claudeFetch } from "@/lib/claude-fetch";
+import { getUserLanguage } from "@/lib/get-user-language";
 
 const MODEL = "claude-haiku-4-5";
 
@@ -181,7 +182,13 @@ export async function POST(request: Request) {
   }
 
   const apiKey = await getApiKey();
-  const systemPrompt = await buildSystemPrompt();
+  const language = await getUserLanguage();
+  let systemPrompt = await buildSystemPrompt();
+  if (language === "ar") {
+    systemPrompt =
+      "## CRITICAL LANGUAGE RULE\nالمستخدم اختار اللغة العربية. اكتب كل ردودك باللغة العربية الفصحى الواضحة، بما في ذلك المنشورات التي تُولّدها، والأفكار، والتعليقات، والأسئلة، ودرجات التقييم. لا تستخدم الإنجليزية إلا للأسماء الخاصة أو الروابط أو المصطلحات التقنية التي لا توجد لها ترجمة شائعة. اكتب منشورات لينكدإن العربية بأسلوب طبيعي يفهمه أي شخص عربي.\n\n" +
+      systemPrompt;
+  }
 
   const response = await claudeFetch(apiKey, {
     model: MODEL,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { claudeFetch } from "@/lib/claude-fetch";
+import { getUserLanguage } from "@/lib/get-user-language";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -58,10 +59,14 @@ export async function POST(req: NextRequest) {
   }
 
   const apiKey = await getApiKey();
+  const language = await getUserLanguage();
+  const system = language === "ar"
+    ? `أنت خبير في تصميم المخططات البصرية. عند تحليل منشور لينكدإن، اكتب وصفًا بصريًا باللغة العربية يخبر مولّد المخططات بما يجب رسمه تمامًا.\n\n${SYSTEM}\n\nاكتب الوصف بالعربية.`
+    : SYSTEM;
   const response = await claudeFetch(apiKey, {
     model: "claude-haiku-4-5",
     max_tokens: 1024,
-    system: SYSTEM,
+    system,
     messages: [{ role: "user", content: `Post:\n\n${post}` }],
   });
 

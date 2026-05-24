@@ -164,23 +164,35 @@ Rules:
 - Total length: 600-1000 words.`;
 }
 
-export async function generateCoachAnalysis(): Promise<PostCoachCache> {
+export async function generateCoachAnalysis(language: "en" | "ar" = "en"): Promise<PostCoachCache> {
   const [myPosts, creatorPosts] = await Promise.all([
     fetchPublishedPosts(),
     fetchTopCreatorPosts(),
   ]);
 
   if (myPosts.length === 0) {
-    throw new Error("No published posts found. Log some posts on the Analytics page first.");
+    throw new Error(
+      language === "ar"
+        ? "لا توجد منشورات منشورة. سجّل بعض المنشورات في صفحة التحليلات أولًا."
+        : "No published posts found. Log some posts on the Analytics page first.",
+    );
   }
 
   const prompt = buildPrompt(myPosts, creatorPosts);
   const apiKey = await getAnthropicKey();
 
+  const messages: { role: "user"; content: string }[] = [
+    { role: "user", content: prompt },
+  ];
+  const system = language === "ar"
+    ? "أنت مدرّب محتوى متخصص في لينكدإن العربي. اكتب التقرير بأكمله باللغة العربية الفصحى الواضحة. كل العناوين، التحليلات، الاقتباسات، التوصيات، وإعادة الصياغة يجب أن تكون بالعربية."
+    : undefined;
+
   const response = await claudeFetch(apiKey, {
     model: MODEL,
     max_tokens: 2048,
-    messages: [{ role: "user", content: prompt }],
+    ...(system ? { system } : {}),
+    messages,
   });
 
   if (!response.ok) {

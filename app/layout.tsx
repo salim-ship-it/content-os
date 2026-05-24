@@ -9,7 +9,6 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"], weight: ["30
 const spaceGrotesk = Space_Grotesk({ variable: "--font-space-grotesk", subsets: ["latin"], weight: ["400","500","600","700"] });
 
 export const metadata: Metadata = { title: "Content OS", description: "Content OS — capture, draft, score, publish, learn" };
-
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const language = await getUserLanguage();
   const dir = dirFor(language);

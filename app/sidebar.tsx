@@ -7,7 +7,17 @@ import { getSupabaseBrowser } from "@/lib/supabase-browser";
 import type { ContentLanguage } from "@/lib/recommended-creators";
 import { getDashboardDict } from "@/lib/i18n-dashboard";
 
-type NavItem = { href: string; labelKey: keyof ReturnType<typeof getDashboardDict>; pending?: boolean };
+type NavLabelKey =
+  | "navHome"
+  | "navVoiceProfile"
+  | "navIdeas"
+  | "navSources"
+  | "navSwipeFile"
+  | "navLeadMagnets"
+  | "navImage"
+  | "navPreview"
+  | "navLearn";
+type NavItem = { href: string; labelKey: NavLabelKey; pending?: boolean };
 const NAV: NavItem[] = [
   { href: "/", labelKey: "navHome" },
   { href: "/onboarding/voice", labelKey: "navVoiceProfile" },

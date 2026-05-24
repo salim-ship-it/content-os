@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import type { ContentLanguage } from "@/lib/recommended-creators";
+import { getDashboardDict } from "@/lib/i18n-dashboard";
 
 type Format = "1:1" | "4:5" | "9:16";
 
@@ -49,7 +51,8 @@ async function renderExcalidrawToPngUrl(scene: ExcalidrawScene): Promise<string>
   return URL.createObjectURL(blob);
 }
 
-export function ImageClient() {
+export function ImageClient({ language = "en" }: { language?: ContentLanguage }) {
+  const t = getDashboardDict(language);
   const [post, setPost] = useState("");
   const [brief, setBrief] = useState("");
   const [format, setFormat] = useState<Format>("4:5");
@@ -79,7 +82,7 @@ export function ImageClient() {
       const { brief: generatedBrief } = (await res.json()) as { brief: string };
       setBrief(generatedBrief);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Analysis failed");
+      setError(e instanceof Error ? e.message : t.imageErrAnalyzeFail);
     } finally {
       setAnalyzing(false);
     }
@@ -109,7 +112,7 @@ export function ImageClient() {
       setPngUrl(url);
       setElapsed(Date.now() - t0);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Generation failed");
+      setError(e instanceof Error ? e.message : t.imageErrGenerateFail);
     } finally {
       setGenerating(false);
     }
@@ -131,10 +134,10 @@ export function ImageClient() {
     <div className="max-w-[960px] mx-auto">
       <header className="mb-8">
         <h1 className="text-3xl font-semibold mb-2" style={{ color: "var(--vl-text-heading)" }}>
-          Image
+          {t.imageTitle}
         </h1>
         <p className="text-sm" style={{ color: "var(--vl-text-muted)" }}>
-          Paste a post, analyze it to get a brief, then generate the diagram.
+          {t.imageSubtitle}
         </p>
       </header>
 
@@ -144,7 +147,7 @@ export function ImageClient() {
         style={{ borderColor: "var(--vl-border)", background: "var(--vl-bg-card)" }}
       >
         <p className="text-[12px] mb-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>
-          Step 1 — paste your LinkedIn post
+          {t.imageStep1}
         </p>
         <textarea
           value={post}
@@ -155,7 +158,7 @@ export function ImageClient() {
               analyzePost();
             }
           }}
-          placeholder="Paste your post here…"
+          placeholder={t.imagePostPlaceholder}
           disabled={loading}
           rows={7}
           className="w-full bg-transparent outline-none resize-none text-[14px] leading-[1.6]"
@@ -168,7 +171,7 @@ export function ImageClient() {
             className="px-4 py-2 rounded-md text-[13px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "var(--vl-accent)", color: "#fff" }}
           >
-            {analyzing ? "Analyzing…" : "Analyze post"}
+            {analyzing ? t.imageAnalyzing : t.imageAnalyze}
           </button>
         </div>
       </div>
@@ -183,7 +186,7 @@ export function ImageClient() {
         }}
       >
         <p className="text-[12px] mb-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>
-          Step 2 — review the brief, then generate
+          {t.imageStep2}
         </p>
         <textarea
           value={brief}
@@ -194,7 +197,7 @@ export function ImageClient() {
               generateDiagram();
             }
           }}
-          placeholder="Brief will appear here after you analyze the post. You can also type one manually."
+          placeholder={t.imageBriefPlaceholder}
           disabled={generating}
           rows={6}
           className="w-full bg-transparent outline-none resize-none text-[14px] leading-[1.6]"
@@ -221,7 +224,7 @@ export function ImageClient() {
           ))}
           <span className="flex-1" />
           <span className="text-[11px] font-mono" style={{ color: "var(--vl-text-muted)" }}>
-            ⌘↵ to generate
+            {t.imageGenerateHint}
           </span>
           <button
             onClick={generateDiagram}
@@ -229,7 +232,7 @@ export function ImageClient() {
             className="px-4 py-2 rounded-md text-[13px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "var(--vl-accent)", color: "#fff" }}
           >
-            {generating ? "Generating…" : "Generate diagram"}
+            {generating ? t.imageGenerating : t.imageGenerate}
           </button>
         </div>
       </div>
@@ -252,7 +255,7 @@ export function ImageClient() {
             className="inline-block w-2 h-2 rounded-full mr-2 align-middle"
             style={{ background: "var(--vl-accent)", animation: "pulse 1.2s ease-in-out infinite" }}
           />
-          Claude is drawing the scene… (~30–60s)
+          {t.imageDrawing}
         </div>
       )}
 
@@ -270,11 +273,11 @@ export function ImageClient() {
               className="px-3 py-1.5 rounded-md text-[12px] font-semibold"
               style={{ background: "var(--vl-accent)", color: "#fff" }}
             >
-              Download PNG
+              {t.imageDownload}
             </button>
             {elapsed !== null && (
               <span className="text-[11px] font-mono" style={{ color: "var(--vl-text-muted)" }}>
-                rendered in {(elapsed / 1000).toFixed(1)}s
+                {t.imageRendered((elapsed / 1000).toFixed(1))}
               </span>
             )}
           </div>

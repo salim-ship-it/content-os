@@ -101,6 +101,114 @@ export type DashboardDict = {
   sourcesRemove: string;
   sourcesEmpty: (kind: string) => string;
   sourcesCount: (n: number) => string;
+  // swipe file (creators)
+  swipeTagline: string;
+  swipeTitle: string;
+  swipeSubtitle: (tracked: number, posts: number) => string;
+  swipeSearchPlaceholder: string;
+  swipeEmpty: string;
+  swipePostsBadge: (n: number) => string;
+  swipeAvgLikes: string;
+  swipeBest: string;
+  // learn
+  learnTagline: string;
+  learnTitle: string;
+  learnCoachTagline: string;
+  learnCoachTitle: string;
+  learnCoachSubtitle: string;
+  learnAnalyze: string;
+  learnAnalyzing: string;
+  learnRefresh: string;
+  learnLoadingMain: string;
+  learnLoadingSub: string;
+  learnEmptyHint: string;
+  learnAnalysisFooter: (myCount: number, creatorCount: number) => string;
+  learnGeneratedOn: (date: string, time: string) => string;
+  learnAddTitle: string;
+  learnAddSubtitle: string;
+  learnUrlLabel: string;
+  learnUrlPlaceholder: string;
+  learnTextLabel: string;
+  learnTextPlaceholder: string;
+  learnDateLabel: string;
+  learnLikesLabel: string;
+  learnCommentsLabel: string;
+  learnSave: string;
+  learnSaving: string;
+  learnSaved: string;
+  learnErrUrl: string;
+  learnErrText: string;
+  learnErrSaveFail: string;
+  // image
+  imageTitle: string;
+  imageSubtitle: string;
+  imageStep1: string;
+  imageStep2: string;
+  imagePostPlaceholder: string;
+  imageBriefPlaceholder: string;
+  imageAnalyze: string;
+  imageAnalyzing: string;
+  imageGenerate: string;
+  imageGenerating: string;
+  imageGenerateHint: string;
+  imageDrawing: string;
+  imageDownload: string;
+  imageRendered: (sec: string) => string;
+  imageErrAnalyzeFail: string;
+  imageErrGenerateFail: string;
+  imageErrTimeout: string;
+  // preview
+  previewTagline: string;
+  previewTitle: string;
+  previewModeBoth: string;
+  previewModeDesktop: string;
+  previewModeMobile: string;
+  previewNameLabel: string;
+  previewHeadlineLabel: string;
+  previewContentLabel: string;
+  previewContentPlaceholder: string;
+  previewCharsLabel: string;
+  previewWordsLabel: string;
+  previewLinesLabel: string;
+  previewLimitsBody: string;
+  previewEmpty: string;
+  previewDeviceMobile: string;
+  previewDeviceDesktop: string;
+  previewFollow: string;
+  previewSeeMore: string;
+  previewActionLike: string;
+  previewActionComment: string;
+  previewActionRepost: string;
+  previewActionSend: string;
+  previewEngagement: (likes: number, comments: number, reposts: number) => string;
+  previewStatsExpanded: string;
+  previewStatsFeed: string;
+  // lead magnets
+  lmTagline: string;
+  lmTitle: string;
+  lmSubtitle: (n: number) => string;
+  lmSearchPlaceholder: string;
+  lmCreateCta: string;
+  lmAddTitle: string;
+  lmSingleTab: string;
+  lmBulkTab: string;
+  lmUrlPlaceholder: string;
+  lmNotesPlaceholder: string;
+  lmAdd: string;
+  lmBulkPlaceholder: string;
+  lmScrapeAll: string;
+  lmBulkDetected: (n: number) => string;
+  lmErrNoUrls: string;
+  lmScraping: string;
+  lmSaved: string;
+  lmBulkProgress: (i: number, n: number) => string;
+  lmBulkSummary: (saved: number, skipped: number, failed: number) => string;
+  lmLoading: string;
+  lmEmptyTitle: string;
+  lmEmptyBody: string;
+  lmCardLikes: string;
+  lmCardComments: string;
+  lmCardUntitled: string;
 };
 
 const enCommands: ChatCommand[] = [
@@ -295,6 +403,114 @@ const en: DashboardDict = {
   sourcesRemove: "Remove",
   sourcesEmpty: (k) => `No ${k} sources yet.`,
   sourcesCount: (n) => `${n} source${n !== 1 ? "s" : ""}`,
+
+  swipeTagline: "Swipe File",
+  swipeTitle: "Creators",
+  swipeSubtitle: (t, p) => `${t} tracked creator${t === 1 ? "" : "s"} · ${p} posts · click a tile to open the dashboard`,
+  swipeSearchPlaceholder: "Search creators...",
+  swipeEmpty: "No creators match your search.",
+  swipePostsBadge: (n) => `${n} posts`,
+  swipeAvgLikes: "avg likes",
+  swipeBest: "best",
+
+  learnTagline: "Learn",
+  learnTitle: "Learn & Improve",
+  learnCoachTagline: "AI Coach",
+  learnCoachTitle: "What to do next",
+  learnCoachSubtitle: "Analyzes your posts vs top creators and tells you exactly what to change",
+  learnAnalyze: "Analyze my posts",
+  learnAnalyzing: "Analyzing...",
+  learnRefresh: "Refresh analysis",
+  learnLoadingMain: "Pulling your posts and comparing against top creators...",
+  learnLoadingSub: "This takes 15-30 seconds",
+  learnEmptyHint: 'Click "Analyze my posts" to get your first coaching report. Make sure you\'ve logged posts on the Analytics page first.',
+  learnAnalysisFooter: (my, cr) => `Based on ${my} of your posts vs ${cr} top creator posts`,
+  learnGeneratedOn: (d, t) => `Generated ${d} at ${t}`,
+  learnAddTitle: "Add a post",
+  learnAddSubtitle: "Just published something? Paste the URL + text here so it shows up in Analytics and gets included in the next coaching report.",
+  learnUrlLabel: "LinkedIn post URL",
+  learnUrlPlaceholder: "https://www.linkedin.com/posts/...",
+  learnTextLabel: "Post text",
+  learnTextPlaceholder: "Paste the full post copy...",
+  learnDateLabel: "Date",
+  learnLikesLabel: "Likes (optional)",
+  learnCommentsLabel: "Comments (optional)",
+  learnSave: "Save post",
+  learnSaving: "Saving...",
+  learnSaved: "✓ Added to Analytics",
+  learnErrUrl: "Post URL is required.",
+  learnErrText: "Post text is required.",
+  learnErrSaveFail: "Failed to save",
+
+  imageTitle: "Image",
+  imageSubtitle: "Paste a post, analyze it to get a brief, then generate the diagram.",
+  imageStep1: "Step 1 — paste your LinkedIn post",
+  imageStep2: "Step 2 — review the brief, then generate",
+  imagePostPlaceholder: "Paste your post here…",
+  imageBriefPlaceholder: "Brief will appear here after you analyze the post. You can also type one manually.",
+  imageAnalyze: "Analyze post",
+  imageAnalyzing: "Analyzing…",
+  imageGenerate: "Generate diagram",
+  imageGenerating: "Generating…",
+  imageGenerateHint: "⌘↵ to generate",
+  imageDrawing: "Claude is drawing the scene… (~30–60s)",
+  imageDownload: "Download PNG",
+  imageRendered: (s) => `rendered in ${s}s`,
+  imageErrAnalyzeFail: "Analysis failed",
+  imageErrGenerateFail: "Generation failed",
+  imageErrTimeout: "Timed out after 5 minutes — try again with a simpler brief.",
+
+  previewTagline: "Preview",
+  previewTitle: "Post Preview",
+  previewModeBoth: "Both",
+  previewModeDesktop: "🖥️ Desktop",
+  previewModeMobile: "📱 Mobile",
+  previewNameLabel: "Your name",
+  previewHeadlineLabel: "Headline",
+  previewContentLabel: "Post content",
+  previewContentPlaceholder: "Paste your post here...",
+  previewCharsLabel: "chars",
+  previewWordsLabel: "words",
+  previewLinesLabel: "lines",
+  previewLimitsBody: 'LinkedIn limits: 3,000 chars max. Feed shows 3 lines before "…see more" — what\'s visible above depends on your line breaks. Sweet spot: 600–1,300 chars.',
+  previewEmpty: "Paste your post on the left to see the preview",
+  previewDeviceMobile: "📱 Mobile",
+  previewDeviceDesktop: "🖥️ Desktop",
+  previewFollow: "+ Follow",
+  previewSeeMore: "…see more",
+  previewActionLike: "👍 Like",
+  previewActionComment: "💬 Comment",
+  previewActionRepost: "🔄 Repost",
+  previewActionSend: "📤 Send",
+  previewEngagement: (l, c, r) => `${l} · ${c} comments · ${r} reposts`,
+  previewStatsExpanded: "expanded",
+  previewStatsFeed: "feed view (3 lines)",
+
+  lmTagline: "Lead Magnets",
+  lmTitle: "Swipe File",
+  lmSubtitle: (n) => `${n} lead magnet post${n === 1 ? "" : "s"} saved`,
+  lmSearchPlaceholder: "Search...",
+  lmCreateCta: "+ Create a lead magnet",
+  lmAddTitle: "Add lead magnet posts",
+  lmSingleTab: "Single URL",
+  lmBulkTab: "Bulk paste",
+  lmUrlPlaceholder: "Paste LinkedIn post URL...",
+  lmNotesPlaceholder: "Notes (optional)",
+  lmAdd: "Add",
+  lmBulkPlaceholder: "Paste LinkedIn post URLs — one per line.\n\nTip: Go to your LinkedIn profile → Comments tab → use the bookmarklet below to copy all post URLs, then paste here.",
+  lmScrapeAll: "Scrape all",
+  lmBulkDetected: (n) => `${n} URLs detected`,
+  lmErrNoUrls: "No LinkedIn URLs found. Paste one URL per line.",
+  lmScraping: "Scraping...",
+  lmSaved: "✓ Saved",
+  lmBulkProgress: (i, n) => `Scraping ${i}/${n}...`,
+  lmBulkSummary: (s, k, f) => `✓ ${s} saved · ${k} duplicates · ${f} failed`,
+  lmLoading: "Loading...",
+  lmEmptyTitle: "No lead magnets yet",
+  lmEmptyBody: "Paste a LinkedIn post URL above or wait for the daily comment scraper to populate this.",
+  lmCardLikes: "likes",
+  lmCardComments: "comments",
+  lmCardUntitled: "Untitled",
 };
 
 const ar: DashboardDict = {
@@ -401,6 +617,114 @@ const ar: DashboardDict = {
   sourcesRemove: "حذف",
   sourcesEmpty: (k) => `لا توجد مصادر ${k} بعد.`,
   sourcesCount: (n) => `${n} مصدر`,
+
+  swipeTagline: "ملف الإلهام",
+  swipeTitle: "صنّاع المحتوى",
+  swipeSubtitle: (t, p) => `${t} صانع محتوى متابَع · ${p} منشور · انقر على بطاقة لفتح اللوحة`,
+  swipeSearchPlaceholder: "ابحث عن صانع محتوى…",
+  swipeEmpty: "لا يوجد صانعو محتوى يطابقون البحث.",
+  swipePostsBadge: (n) => `${n} منشور`,
+  swipeAvgLikes: "متوسط الإعجابات",
+  swipeBest: "أفضل",
+
+  learnTagline: "تعلّم",
+  learnTitle: "تعلّم وحسّن",
+  learnCoachTagline: "مدرّب الذكاء الاصطناعي",
+  learnCoachTitle: "ماذا تفعل تاليًا",
+  learnCoachSubtitle: "يحلّل منشوراتك مقابل أفضل صنّاع المحتوى ويخبرك تمامًا بما يجب تغييره",
+  learnAnalyze: "حلّل منشوراتي",
+  learnAnalyzing: "جاري التحليل…",
+  learnRefresh: "تحديث التحليل",
+  learnLoadingMain: "نسحب منشوراتك ونقارنها بأفضل صنّاع المحتوى…",
+  learnLoadingSub: "يستغرق هذا 15-30 ثانية",
+  learnEmptyHint: 'انقر "حلّل منشوراتي" للحصول على أول تقرير تدريبي. تأكّد من تسجيل منشوراتك في صفحة التحليلات أولًا.',
+  learnAnalysisFooter: (my, cr) => `بناءً على ${my} من منشوراتك مقابل ${cr} من منشورات أفضل صنّاع المحتوى`,
+  learnGeneratedOn: (d, t) => `تم الإنشاء في ${d} الساعة ${t}`,
+  learnAddTitle: "إضافة منشور",
+  learnAddSubtitle: "نشرت شيئًا توًا؟ الصق الرابط + النص هنا ليظهر في التحليلات ويُدرَج في التقرير التدريبي التالي.",
+  learnUrlLabel: "رابط منشور لينكدإن",
+  learnUrlPlaceholder: "https://www.linkedin.com/posts/...",
+  learnTextLabel: "نص المنشور",
+  learnTextPlaceholder: "الصق نص المنشور كاملًا…",
+  learnDateLabel: "التاريخ",
+  learnLikesLabel: "الإعجابات (اختياري)",
+  learnCommentsLabel: "التعليقات (اختياري)",
+  learnSave: "حفظ المنشور",
+  learnSaving: "جاري الحفظ…",
+  learnSaved: "✓ تمت الإضافة للتحليلات",
+  learnErrUrl: "رابط المنشور مطلوب.",
+  learnErrText: "نص المنشور مطلوب.",
+  learnErrSaveFail: "فشل الحفظ",
+
+  imageTitle: "الصور",
+  imageSubtitle: "الصق منشورًا، حلّله للحصول على وصف، ثم أنشئ المخطط.",
+  imageStep1: "الخطوة 1 — الصق منشور لينكدإن",
+  imageStep2: "الخطوة 2 — راجع الوصف ثم أنشئ",
+  imagePostPlaceholder: "الصق منشورك هنا…",
+  imageBriefPlaceholder: "سيظهر الوصف هنا بعد تحليل المنشور. يمكنك أيضًا كتابة وصف يدويًا.",
+  imageAnalyze: "حلّل المنشور",
+  imageAnalyzing: "جاري التحليل…",
+  imageGenerate: "أنشئ المخطط",
+  imageGenerating: "جاري الإنشاء…",
+  imageGenerateHint: "⌘↵ للإنشاء",
+  imageDrawing: "كلود يرسم المشهد… (~30-60 ثانية)",
+  imageDownload: "تنزيل PNG",
+  imageRendered: (s) => `تم العرض في ${s} ث`,
+  imageErrAnalyzeFail: "فشل التحليل",
+  imageErrGenerateFail: "فشل الإنشاء",
+  imageErrTimeout: "انتهى الوقت بعد 5 دقائق — حاول مجددًا بوصف أبسط.",
+
+  previewTagline: "المعاينة",
+  previewTitle: "معاينة المنشور",
+  previewModeBoth: "كلاهما",
+  previewModeDesktop: "🖥️ سطح المكتب",
+  previewModeMobile: "📱 الجوال",
+  previewNameLabel: "اسمك",
+  previewHeadlineLabel: "العنوان الوظيفي",
+  previewContentLabel: "نص المنشور",
+  previewContentPlaceholder: "الصق منشورك هنا…",
+  previewCharsLabel: "حرف",
+  previewWordsLabel: "كلمة",
+  previewLinesLabel: "سطر",
+  previewLimitsBody: 'حدود لينكدإن: 3,000 حرف كحد أقصى. تظهر 3 أسطر في الخلاصة قبل "…المزيد" — وما يُرى يعتمد على فواصل الأسطر. المثالي: 600-1,300 حرف.',
+  previewEmpty: "الصق منشورك على اليسار لرؤية المعاينة",
+  previewDeviceMobile: "📱 الجوال",
+  previewDeviceDesktop: "🖥️ سطح المكتب",
+  previewFollow: "+ متابعة",
+  previewSeeMore: "…المزيد",
+  previewActionLike: "👍 إعجاب",
+  previewActionComment: "💬 تعليق",
+  previewActionRepost: "🔄 إعادة نشر",
+  previewActionSend: "📤 إرسال",
+  previewEngagement: (l, c, r) => `${l} · ${c} تعليق · ${r} إعادة نشر`,
+  previewStatsExpanded: "موسّع",
+  previewStatsFeed: "عرض الخلاصة (3 أسطر)",
+
+  lmTagline: "مغناطيس العملاء",
+  lmTitle: "ملف الإلهام",
+  lmSubtitle: (n) => `${n} منشور مغناطيس عملاء محفوظ`,
+  lmSearchPlaceholder: "ابحث…",
+  lmCreateCta: "+ أنشئ مغناطيس عملاء",
+  lmAddTitle: "إضافة منشورات مغناطيس عملاء",
+  lmSingleTab: "رابط واحد",
+  lmBulkTab: "لصق متعدد",
+  lmUrlPlaceholder: "الصق رابط منشور لينكدإن…",
+  lmNotesPlaceholder: "ملاحظات (اختياري)",
+  lmAdd: "إضافة",
+  lmBulkPlaceholder: "الصق روابط منشورات لينكدإن — رابطًا في كل سطر.\n\nنصيحة: اذهب لملفك على لينكدإن → تبويب التعليقات → استخدم الـ bookmarklet لنسخ كل الروابط، ثم الصقها هنا.",
+  lmScrapeAll: "اسحب الكل",
+  lmBulkDetected: (n) => `تم رصد ${n} رابطًا`,
+  lmErrNoUrls: "لم يُعثر على روابط لينكدإن. الصق رابطًا في كل سطر.",
+  lmScraping: "جاري السحب…",
+  lmSaved: "✓ تم الحفظ",
+  lmBulkProgress: (i, n) => `جاري سحب ${i}/${n}…`,
+  lmBulkSummary: (s, k, f) => `✓ ${s} محفوظ · ${k} مكرر · ${f} فشل`,
+  lmLoading: "جاري التحميل…",
+  lmEmptyTitle: "لا توجد مغناطيسات بعد",
+  lmEmptyBody: "الصق رابط منشور لينكدإن أعلاه أو انتظر السحب اليومي للتعليقات لتعبئة هذا.",
+  lmCardLikes: "إعجاب",
+  lmCardComments: "تعليق",
+  lmCardUntitled: "بدون عنوان",
 };
 
 export function getDashboardDict(lang: ContentLanguage): DashboardDict {

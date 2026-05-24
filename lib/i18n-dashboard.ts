@@ -38,6 +38,69 @@ export type DashboardDict = {
   errorPrefix: string;
   errorGeneric: string;
   commands: ChatCommand[];
+  // ideas
+  ideasTagline: string;
+  ideasTitle: string;
+  ideasSortNewestAdded: string;
+  ideasSortNewestPublished: string;
+  ideasSortMostLiked: string;
+  ideasSortMostDiscussed: string;
+  ideasAllTypes: string;
+  ideasSearchPlaceholder: string;
+  ideasEmpty: string;
+  ideasCountLabel: (n: number) => string;
+  ideasNewBadge: string;
+  ideasMore: string;
+  ideasLikes: string;
+  ideasComments: string;
+  ideasViews: string;
+  ideasReposts: string;
+  ideasWhyItWorked: string;
+  ideasOpenOriginal: string;
+  ideasDateToday: string;
+  ideasDateWeek: string;
+  ideasDateAll: string;
+  ideasSourceAll: string;
+  ideasSourceLinkedIn: string;
+  ideasSourceReddit: string;
+  ideasSourceNewsletter: string;
+  ideasSourceYouTube: string;
+  ideasTypeLabel: (type: string) => string;
+  // sources
+  sourcesTagline: string;
+  sourcesTitle: string;
+  sourcesSubtitle: string;
+  sourcesRescan: string;
+  sourcesRescanning: string;
+  sourcesRestore: string;
+  sourcesRestoring: string;
+  sourcesRestoreConfirm: string;
+  sourcesRestoreSuccess: (restored: number, total: number) => string;
+  sourcesRestoreFail: string;
+  sourcesRescanFail: (err: string) => string;
+  sourcesRescanQueued: (n: number) => string;
+  sourcesRescanRetry: string;
+  sourcesScrapeNotice: (name: string) => string;
+  sourcesAddHeading: (kind: string) => string;
+  sourcesKindLinkedIn: string;
+  sourcesKindReddit: string;
+  sourcesKindNewsletter: string;
+  sourcesKindYouTube: string;
+  sourcesNamePlaceholder: string;
+  sourcesUrlPlaceholder: string;
+  sourcesNotePlaceholder: string;
+  sourcesMaxPlaceholder: string;
+  sourcesAdd: string;
+  sourcesColName: string;
+  sourcesColUrl: string;
+  sourcesColNote: string;
+  sourcesColMax: string;
+  sourcesColStatus: string;
+  sourcesEnabled: string;
+  sourcesDisabled: string;
+  sourcesRemove: string;
+  sourcesEmpty: (kind: string) => string;
+  sourcesCount: (n: number) => string;
 };
 
 const enCommands: ChatCommand[] = [
@@ -157,6 +220,81 @@ const en: DashboardDict = {
   errorPrefix: "Error",
   errorGeneric: "Something went wrong",
   commands: enCommands,
+
+  ideasTagline: "Swipe File",
+  ideasTitle: "Ideas",
+  ideasSortNewestAdded: "Newest added",
+  ideasSortNewestPublished: "Newest published",
+  ideasSortMostLiked: "Most liked",
+  ideasSortMostDiscussed: "Most discussed",
+  ideasAllTypes: "All types",
+  ideasSearchPlaceholder: "Search posts...",
+  ideasEmpty: "No posts match your filters.",
+  ideasCountLabel: (n) => `${n} post${n === 1 ? "" : "s"}`,
+  ideasNewBadge: "New",
+  ideasMore: "...more",
+  ideasLikes: "likes",
+  ideasComments: "comments",
+  ideasViews: "views",
+  ideasReposts: "reposts",
+  ideasWhyItWorked: "Why it worked",
+  ideasOpenOriginal: "Open original →",
+  ideasDateToday: "Today",
+  ideasDateWeek: "This week",
+  ideasDateAll: "All time",
+  ideasSourceAll: "All",
+  ideasSourceLinkedIn: "LinkedIn",
+  ideasSourceReddit: "Reddit",
+  ideasSourceNewsletter: "Newsletter",
+  ideasSourceYouTube: "YouTube",
+  ideasTypeLabel: (type) => {
+    const m: Record<string, string> = {
+      "hot-takes": "Hot take", "hot take": "Hot take",
+      stories: "Story", story: "Story",
+      "case-studies": "Case study", "case study": "Case study",
+      educational: "Educational", insightful: "Insightful",
+      transparency: "Transparency",
+      announcements: "Announcement", announcement: "Announcement",
+      engagement: "Engagement",
+      reddit: "Reddit", newsletters: "Newsletter", youtube: "YouTube",
+    };
+    return m[type] || type;
+  },
+
+  sourcesTagline: "Watchlist",
+  sourcesTitle: "Sources",
+  sourcesSubtitle: "Creators, subreddits, newsletters and channels we watch for you.",
+  sourcesRescan: "↻ Rescan all",
+  sourcesRescanning: "Rescanning...",
+  sourcesRestore: "↻ Restore defaults",
+  sourcesRestoring: "Restoring...",
+  sourcesRestoreConfirm: "Add the 35 default sources? Any sources you've already added will be kept.",
+  sourcesRestoreSuccess: (r, total) => `Restored ${r} sources (${total} total).`,
+  sourcesRestoreFail: "Restore failed. Try again.",
+  sourcesRescanFail: (err) => `Rescan failed: ${err}`,
+  sourcesRescanQueued: (n) => `Queued ${n} source${n !== 1 ? "s" : ""} — check Swipe File in ~5 min.`,
+  sourcesRescanRetry: "Rescan failed. Try again.",
+  sourcesScrapeNotice: (name) => `Scraping posts for "${name}" in background — check Swipe File in ~5 min.`,
+  sourcesAddHeading: (k) => `Add ${k} source`,
+  sourcesKindLinkedIn: "LinkedIn",
+  sourcesKindReddit: "Reddit",
+  sourcesKindNewsletter: "Newsletters",
+  sourcesKindYouTube: "YouTube",
+  sourcesNamePlaceholder: "Name",
+  sourcesUrlPlaceholder: "URL",
+  sourcesNotePlaceholder: "Note (optional)",
+  sourcesMaxPlaceholder: "Max",
+  sourcesAdd: "Add",
+  sourcesColName: "Name",
+  sourcesColUrl: "URL",
+  sourcesColNote: "Note",
+  sourcesColMax: "Max",
+  sourcesColStatus: "Status",
+  sourcesEnabled: "enabled",
+  sourcesDisabled: "disabled",
+  sourcesRemove: "Remove",
+  sourcesEmpty: (k) => `No ${k} sources yet.`,
+  sourcesCount: (n) => `${n} source${n !== 1 ? "s" : ""}`,
 };
 
 const ar: DashboardDict = {
@@ -188,6 +326,81 @@ const ar: DashboardDict = {
   errorPrefix: "خطأ",
   errorGeneric: "حدث خطأ ما",
   commands: arCommands,
+
+  ideasTagline: "ملف الإلهام",
+  ideasTitle: "الأفكار",
+  ideasSortNewestAdded: "الأحدث إضافةً",
+  ideasSortNewestPublished: "الأحدث نشرًا",
+  ideasSortMostLiked: "الأكثر إعجابًا",
+  ideasSortMostDiscussed: "الأكثر نقاشًا",
+  ideasAllTypes: "كل الأنواع",
+  ideasSearchPlaceholder: "ابحث في المنشورات…",
+  ideasEmpty: "لا توجد منشورات تطابق الفلاتر.",
+  ideasCountLabel: (n) => `${n} منشور`,
+  ideasNewBadge: "جديد",
+  ideasMore: "…المزيد",
+  ideasLikes: "إعجاب",
+  ideasComments: "تعليق",
+  ideasViews: "مشاهدة",
+  ideasReposts: "إعادة نشر",
+  ideasWhyItWorked: "لماذا نجح",
+  ideasOpenOriginal: "← فتح الأصلي",
+  ideasDateToday: "اليوم",
+  ideasDateWeek: "هذا الأسبوع",
+  ideasDateAll: "كل الأوقات",
+  ideasSourceAll: "الكل",
+  ideasSourceLinkedIn: "لينكدإن",
+  ideasSourceReddit: "ريديت",
+  ideasSourceNewsletter: "نشرة بريدية",
+  ideasSourceYouTube: "يوتيوب",
+  ideasTypeLabel: (type) => {
+    const m: Record<string, string> = {
+      "hot-takes": "رأي حاد", "hot take": "رأي حاد",
+      stories: "قصة", story: "قصة",
+      "case-studies": "دراسة حالة", "case study": "دراسة حالة",
+      educational: "تعليمي", insightful: "ثاقب",
+      transparency: "شفافية",
+      announcements: "إعلان", announcement: "إعلان",
+      engagement: "تفاعل",
+      reddit: "ريديت", newsletters: "نشرة بريدية", youtube: "يوتيوب",
+    };
+    return m[type] || type;
+  },
+
+  sourcesTagline: "قائمة المتابعة",
+  sourcesTitle: "المصادر",
+  sourcesSubtitle: "صنّاع المحتوى والمجتمعات والنشرات والقنوات التي نراقبها لك.",
+  sourcesRescan: "↻ إعادة فحص الكل",
+  sourcesRescanning: "جاري إعادة الفحص…",
+  sourcesRestore: "↻ استعادة الافتراضي",
+  sourcesRestoring: "جاري الاستعادة…",
+  sourcesRestoreConfirm: "إضافة 35 مصدرًا افتراضيًا؟ سيتم الإبقاء على المصادر التي أضفتها بالفعل.",
+  sourcesRestoreSuccess: (r, total) => `تمت استعادة ${r} مصادر (${total} إجمالًا).`,
+  sourcesRestoreFail: "فشلت الاستعادة. حاول مجددًا.",
+  sourcesRescanFail: (err) => `فشل إعادة الفحص: ${err}`,
+  sourcesRescanQueued: (n) => `تمت إضافة ${n} مصدر للطابور — تحقق من ملف الإلهام بعد ~5 دقائق.`,
+  sourcesRescanRetry: "فشل إعادة الفحص. حاول مجددًا.",
+  sourcesScrapeNotice: (name) => `جاري سحب المنشورات لـ "${name}" في الخلفية — تحقق من ملف الإلهام بعد ~5 دقائق.`,
+  sourcesAddHeading: (k) => `إضافة مصدر ${k}`,
+  sourcesKindLinkedIn: "لينكدإن",
+  sourcesKindReddit: "ريديت",
+  sourcesKindNewsletter: "النشرات البريدية",
+  sourcesKindYouTube: "يوتيوب",
+  sourcesNamePlaceholder: "الاسم",
+  sourcesUrlPlaceholder: "الرابط",
+  sourcesNotePlaceholder: "ملاحظة (اختياري)",
+  sourcesMaxPlaceholder: "الحد",
+  sourcesAdd: "إضافة",
+  sourcesColName: "الاسم",
+  sourcesColUrl: "الرابط",
+  sourcesColNote: "ملاحظة",
+  sourcesColMax: "الحد",
+  sourcesColStatus: "الحالة",
+  sourcesEnabled: "مفعّل",
+  sourcesDisabled: "متوقّف",
+  sourcesRemove: "حذف",
+  sourcesEmpty: (k) => `لا توجد مصادر ${k} بعد.`,
+  sourcesCount: (n) => `${n} مصدر`,
 };
 
 export function getDashboardDict(lang: ContentLanguage): DashboardDict {

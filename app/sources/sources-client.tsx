@@ -2,17 +2,22 @@
 
 import { useState, useMemo } from "react";
 import type { Source, SourceKind } from "@/lib/sources";
-
-const KIND_LABELS: Record<SourceKind, string> = {
-  linkedin: "LinkedIn",
-  reddit: "Reddit",
-  newsletter: "Newsletters",
-  youtube: "YouTube",
-};
+import type { ContentLanguage } from "@/lib/recommended-creators";
+import { getDashboardDict, type DashboardDict } from "@/lib/i18n-dashboard";
 
 const KINDS: SourceKind[] = ["linkedin", "reddit", "newsletter", "youtube"];
 
-export function SourcesClient({ initialSources }: { initialSources: Source[] }) {
+function kindLabel(t: DashboardDict, k: SourceKind): string {
+  switch (k) {
+    case "linkedin": return t.sourcesKindLinkedIn;
+    case "reddit": return t.sourcesKindReddit;
+    case "newsletter": return t.sourcesKindNewsletter;
+    case "youtube": return t.sourcesKindYouTube;
+  }
+}
+
+export function SourcesClient({ initialSources, language = "en" }: { initialSources: Source[]; language?: ContentLanguage }) {
+  const t = getDashboardDict(language);
   const [sources, setSources] = useState(initialSources);
   const [activeTab, setActiveTab] = useState<SourceKind>("linkedin");
   const [restoring, setRestoring] = useState(false);
@@ -21,7 +26,6 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
   const [rescanMsg, setRescanMsg] = useState<string | null>(null);
   const [scrapeMsg, setScrapeMsg] = useState<string | null>(null);
 
-  /* --- form state --- */
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [note, setNote] = useState("");
@@ -29,7 +33,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
 
   async function handleRestore() {
     if (restoring) return;
-    if (!confirm("Add the 35 default sources? Any sources you've already added will be kept.")) return;
+    if (!confirm(t.sourcesRestoreConfirm)) return;
     setRestoring(true);
     setRestoreMsg(null);
     try {
@@ -37,25 +41,22 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
       const data = await res.json();
       const refresh = await fetch("/api/sources");
       setSources(await refresh.json());
-      setRestoreMsg(`Restored ${data.restored} sources (${data.total} total).`);
+      setRestoreMsg(t.sourcesRestoreSuccess(data.restored, data.total));
     } catch {
-      setRestoreMsg("Restore failed. Try again.");
+      setRestoreMsg(t.sourcesRestoreFail);
     } finally {
       setRestoring(false);
     }
   }
 
-  /* --- counts --- */
   const counts: Record<SourceKind, number> = useMemo(() => {
     const c: Record<SourceKind, number> = { linkedin: 0, reddit: 0, newsletter: 0, youtube: 0 };
     for (const s of sources) c[s.kind] = (c[s.kind] || 0) + 1;
     return c;
   }, [sources]);
 
-  /* --- filtered --- */
   const filtered = useMemo(() => sources.filter((s) => s.kind === activeTab), [sources, activeTab]);
 
-  /* --- CRUD --- */
   async function handleRescan() {
     if (rescanning) return;
     setRescanning(true);
@@ -64,12 +65,12 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
       const res = await fetch("/api/sources/rescan", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        setRescanMsg(`Rescan failed: ${data.error || res.status}`);
+        setRescanMsg(t.sourcesRescanFail(data.error || String(res.status)));
       } else {
-        setRescanMsg(`Queued ${data.queued} source${data.queued !== 1 ? "s" : ""} — check Swipe File in ~5 min.`);
+        setRescanMsg(t.sourcesRescanQueued(data.queued));
       }
     } catch {
-      setRescanMsg("Rescan failed. Try again.");
+      setRescanMsg(t.sourcesRescanRetry);
     } finally {
       setRescanning(false);
     }
@@ -93,7 +94,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
     const updated = await res.json();
     setSources(updated);
     if (activeTab === "linkedin" && url) {
-      setScrapeMsg(`Scraping posts for "${name}" in background — check Swipe File in ~5 min.`);
+      setScrapeMsg(t.sourcesScrapeNotice(name));
     }
     setName("");
     setUrl("");
@@ -119,14 +120,17 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
     setSources(updated);
   }
 
+  const isRtl = language === "ar";
+  const textAlign = isRtl ? "text-right" : "text-left";
+
   return (
     <div className="max-w-5xl">
       <div className="text-[11px] uppercase tracking-[0.22em] mb-3" style={{ color: "var(--vl-accent)" }}>
-        Content OS
+        {t.sourcesTagline}
       </div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold" style={{ color: "var(--vl-text-heading)" }}>
-          Sources
+          {t.sourcesTitle}
         </h1>
         <div className="flex items-center gap-2">
           <button
@@ -140,7 +144,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
               opacity: rescanning ? 0.6 : 1,
             }}
           >
-            {rescanning ? "Rescanning..." : "↻ Rescan all"}
+            {rescanning ? t.sourcesRescanning : t.sourcesRescan}
           </button>
           <button
             onClick={handleRestore}
@@ -153,36 +157,26 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
               opacity: restoring ? 0.6 : 1,
             }}
           >
-            {restoring ? "Restoring..." : "↻ Restore defaults"}
+            {restoring ? t.sourcesRestoring : t.sourcesRestore}
           </button>
         </div>
       </div>
       {restoreMsg && (
-        <div
-          className="mb-4 px-4 py-2 rounded-lg text-sm"
-          style={{ background: "var(--vl-accent-glow)", color: "var(--vl-accent)" }}
-        >
+        <div className="mb-4 px-4 py-2 rounded-lg text-sm" style={{ background: "var(--vl-accent-glow)", color: "var(--vl-accent)" }}>
           {restoreMsg}
         </div>
       )}
       {rescanMsg && (
-        <div
-          className="mb-4 px-4 py-2 rounded-lg text-sm"
-          style={{ background: "var(--vl-accent-glow)", color: "var(--vl-accent)" }}
-        >
+        <div className="mb-4 px-4 py-2 rounded-lg text-sm" style={{ background: "var(--vl-accent-glow)", color: "var(--vl-accent)" }}>
           {rescanMsg}
         </div>
       )}
       {scrapeMsg && (
-        <div
-          className="mb-4 px-4 py-2 rounded-lg text-sm"
-          style={{ background: "var(--vl-accent-glow)", color: "var(--vl-accent)" }}
-        >
+        <div className="mb-4 px-4 py-2 rounded-lg text-sm" style={{ background: "var(--vl-accent-glow)", color: "var(--vl-accent)" }}>
           {scrapeMsg}
         </div>
       )}
 
-      {/* Tabs */}
       <div className="flex gap-2 mb-6">
         {KINDS.map((kind) => (
           <button
@@ -195,39 +189,35 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
                 : { background: "var(--vl-bg-card)", color: "var(--vl-text-muted)", border: "1px solid var(--vl-border)" }
             }
           >
-            {KIND_LABELS[kind]}{" "}
-            <span className="ml-1 opacity-70">{counts[kind]}</span>
+            {kindLabel(t, kind)}{" "}
+            <span className={`${isRtl ? "mr-1" : "ml-1"} opacity-70`}>{counts[kind]}</span>
           </button>
         ))}
       </div>
 
-      {/* Add form */}
-      <div
-        className="bg-white rounded-xl border p-5 mb-6"
-        style={{ borderColor: "var(--vl-border)" }}
-      >
+      <div className="bg-white rounded-xl border p-5 mb-6" style={{ borderColor: "var(--vl-border)" }}>
         <div className="text-xs uppercase tracking-wider font-medium mb-3" style={{ color: "var(--vl-text-muted)" }}>
-          Add {KIND_LABELS[activeTab]} source
+          {t.sourcesAddHeading(kindLabel(t, activeTab))}
         </div>
         <div className="grid grid-cols-12 gap-3">
           <input
             className="col-span-3 rounded-lg border px-3 py-2 text-sm outline-none"
             style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)", background: "var(--vl-bg-card)" }}
-            placeholder="Name"
+            placeholder={t.sourcesNamePlaceholder}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <input
             className="col-span-4 rounded-lg border px-3 py-2 text-sm outline-none"
             style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)", background: "var(--vl-bg-card)" }}
-            placeholder="URL"
+            placeholder={t.sourcesUrlPlaceholder}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
           <input
             className="col-span-3 rounded-lg border px-3 py-2 text-sm outline-none"
             style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)", background: "var(--vl-bg-card)" }}
-            placeholder="Note (optional)"
+            placeholder={t.sourcesNotePlaceholder}
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
@@ -237,7 +227,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
               style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)", background: "var(--vl-bg-card)" }}
               type="number"
               min={1}
-              placeholder="Max"
+              placeholder={t.sourcesMaxPlaceholder}
               value={maxPosts}
               onChange={(e) => setMaxPosts(Number(e.target.value))}
             />
@@ -249,24 +239,23 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--vl-accent-hover)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "var(--vl-accent)")}
           >
-            Add
+            {t.sourcesAdd}
           </button>
         </div>
       </div>
 
-      {/* Table */}
       <div className="rounded-xl border overflow-hidden" style={{ borderColor: "var(--vl-border)" }}>
         <table className="w-full text-sm">
           <thead>
             <tr style={{ background: "var(--vl-bg-card)" }}>
-              <th className="text-left px-4 py-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>Name</th>
-              <th className="text-left px-4 py-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>URL</th>
-              <th className="text-left px-4 py-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>Note</th>
+              <th className={`${textAlign} px-4 py-3 font-medium`} style={{ color: "var(--vl-text-muted)" }}>{t.sourcesColName}</th>
+              <th className={`${textAlign} px-4 py-3 font-medium`} style={{ color: "var(--vl-text-muted)" }}>{t.sourcesColUrl}</th>
+              <th className={`${textAlign} px-4 py-3 font-medium`} style={{ color: "var(--vl-text-muted)" }}>{t.sourcesColNote}</th>
               {activeTab !== "newsletter" && (
-                <th className="text-right px-4 py-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>Max</th>
+                <th className={`${isRtl ? "text-left" : "text-right"} px-4 py-3 font-medium`} style={{ color: "var(--vl-text-muted)" }}>{t.sourcesColMax}</th>
               )}
-              <th className="text-center px-4 py-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>Status</th>
-              <th className="text-right px-4 py-3 font-medium" style={{ color: "var(--vl-text-muted)" }}></th>
+              <th className="text-center px-4 py-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>{t.sourcesColStatus}</th>
+              <th className={`${isRtl ? "text-left" : "text-right"} px-4 py-3 font-medium`} style={{ color: "var(--vl-text-muted)" }}></th>
             </tr>
           </thead>
           <tbody>
@@ -276,13 +265,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
                   {source.name}
                 </td>
                 <td className="px-4 py-3">
-                  <a
-                    href={source.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm underline"
-                    style={{ color: "var(--vl-accent)" }}
-                  >
+                  <a href={source.url} target="_blank" rel="noopener noreferrer" className="text-sm underline" style={{ color: "var(--vl-accent)" }}>
                     {source.url.length > 40 ? source.url.slice(0, 40) + "..." : source.url}
                   </a>
                 </td>
@@ -290,7 +273,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
                   {source.note || "—"}
                 </td>
                 {activeTab !== "newsletter" && (
-                  <td className="px-4 py-3 text-right text-sm" style={{ color: "var(--vl-text)" }}>
+                  <td className={`px-4 py-3 ${isRtl ? "text-left" : "text-right"} text-sm`} style={{ color: "var(--vl-text)" }}>
                     {source.maxPosts}
                   </td>
                 )}
@@ -304,10 +287,10 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
                         : { background: "#f3f4f6", color: "#6b7280" }
                     }
                   >
-                    {source.enabled ? "enabled" : "disabled"}
+                    {source.enabled ? t.sourcesEnabled : t.sourcesDisabled}
                   </button>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className={`px-4 py-3 ${isRtl ? "text-left" : "text-right"}`}>
                   <button
                     onClick={() => handleRemove(source.url)}
                     className="text-xs font-medium px-2.5 py-1 rounded transition-colors"
@@ -315,7 +298,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
                     onMouseEnter={(e) => (e.currentTarget.style.background = "#fee2e2")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "#fef2f2")}
                   >
-                    Remove
+                    {t.sourcesRemove}
                   </button>
                 </td>
               </tr>
@@ -323,7 +306,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={activeTab !== "newsletter" ? 6 : 5} className="px-4 py-12 text-center" style={{ color: "var(--vl-text-muted)" }}>
-                  No {KIND_LABELS[activeTab]} sources yet.
+                  {t.sourcesEmpty(kindLabel(t, activeTab))}
                 </td>
               </tr>
             )}
@@ -332,7 +315,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
       </div>
 
       <div className="mt-3 text-xs" style={{ color: "var(--vl-text-muted)" }}>
-        {filtered.length} source{filtered.length !== 1 ? "s" : ""}
+        {t.sourcesCount(filtered.length)}
       </div>
     </div>
   );

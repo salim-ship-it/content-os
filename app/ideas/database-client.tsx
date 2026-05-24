@@ -2,22 +2,8 @@
 
 import { useState, useMemo } from "react";
 import type { WinningPost, SourceKind } from "@/lib/winning-posts";
-
-const TYPE_LABELS: Record<string, string> = {
-  "hot-takes": "Hot take", "hot take": "Hot take",
-  stories: "Story", story: "Story",
-  "case-studies": "Case study", "case study": "Case study",
-  educational: "Educational", insightful: "Insightful",
-  transparency: "Transparency",
-  announcements: "Announcement", announcement: "Announcement",
-  engagement: "Engagement",
-  reddit: "Reddit", newsletters: "Newsletter", youtube: "YouTube",
-};
-
-const SOURCE_LABELS: Record<string, string> = {
-  all: "All", linkedin: "LinkedIn", reddit: "Reddit",
-  newsletter: "Newsletter", youtube: "YouTube",
-};
+import type { ContentLanguage } from "@/lib/recommended-creators";
+import { getDashboardDict, type DashboardDict } from "@/lib/i18n-dashboard";
 
 const PLATFORM_ICONS: Record<SourceKind, string> = {
   linkedin: "/icons/linkedin.svg",
@@ -30,11 +16,25 @@ type SourceTab = "all" | SourceKind;
 const SOURCE_TABS: SourceTab[] = ["all", "linkedin", "reddit", "newsletter", "youtube"];
 
 type DateTab = "all" | "today" | "week";
-const DATE_TABS: { value: DateTab; label: string }[] = [
-  { value: "today", label: "Today" },
-  { value: "week", label: "This week" },
-  { value: "all", label: "All time" },
-];
+const DATE_TAB_VALUES: DateTab[] = ["today", "week", "all"];
+
+function sourceLabel(t: DashboardDict, tab: SourceTab): string {
+  switch (tab) {
+    case "all": return t.ideasSourceAll;
+    case "linkedin": return t.ideasSourceLinkedIn;
+    case "reddit": return t.ideasSourceReddit;
+    case "newsletter": return t.ideasSourceNewsletter;
+    case "youtube": return t.ideasSourceYouTube;
+  }
+}
+
+function dateLabel(t: DashboardDict, tab: DateTab): string {
+  switch (tab) {
+    case "today": return t.ideasDateToday;
+    case "week": return t.ideasDateWeek;
+    case "all": return t.ideasDateAll;
+  }
+}
 
 function isToday(iso: string): boolean {
   if (!iso) return false;
@@ -61,7 +61,7 @@ function extractSubreddit(creator: string): string | null {
   return m ? m[1] : null;
 }
 
-function SwipeCard({ post, onClick }: { post: WinningPost; onClick: () => void }) {
+function SwipeCard({ post, onClick, t, isRtl }: { post: WinningPost; onClick: () => void; t: DashboardDict; isRtl: boolean }) {
   const previewText = post.content || post.topic || "";
   const truncated = previewText.length > 280 ? previewText.slice(0, 280) : previewText;
   const hasMore = previewText.length > 280;
@@ -75,10 +75,10 @@ function SwipeCard({ post, onClick }: { post: WinningPost; onClick: () => void }
     >
       {isNew && (
         <span
-          className="absolute -top-2 left-4 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider z-10"
+          className={`absolute -top-2 ${isRtl ? "right-4" : "left-4"} px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider z-10`}
           style={{ background: "var(--vl-accent)", color: "#fff" }}
         >
-          New
+          {t.ideasNewBadge}
         </span>
       )}
       {/* Header */}
@@ -104,7 +104,7 @@ function SwipeCard({ post, onClick }: { post: WinningPost; onClick: () => void }
             className="px-2 py-0.5 rounded text-[10px] font-medium"
             style={{ background: "var(--vl-accent-glow)", color: "var(--vl-accent-hover)" }}
           >
-            {TYPE_LABELS[post.type] || post.type}
+            {t.ideasTypeLabel(post.type)}
           </span>
           <img
             src={PLATFORM_ICONS[post.source]}
@@ -128,7 +128,7 @@ function SwipeCard({ post, onClick }: { post: WinningPost; onClick: () => void }
             {truncated}
             {hasMore && (
               <span className="font-medium" style={{ color: "var(--vl-text-muted)" }}>
-                {" "}...more
+                {" "}{t.ideasMore}
               </span>
             )}
           </div>
@@ -154,19 +154,19 @@ function SwipeCard({ post, onClick }: { post: WinningPost; onClick: () => void }
         style={{ borderColor: "var(--vl-border)", color: "var(--vl-text-muted)" }}
       >
         <span>
-          <strong style={{ color: "var(--vl-text-heading)" }}>{post.likes.toLocaleString()}</strong> likes
+          <strong style={{ color: "var(--vl-text-heading)" }}>{post.likes.toLocaleString()}</strong> {t.ideasLikes}
         </span>
         <span>
-          <strong style={{ color: "var(--vl-text-heading)" }}>{post.comments.toLocaleString()}</strong> comments
+          <strong style={{ color: "var(--vl-text-heading)" }}>{post.comments.toLocaleString()}</strong> {t.ideasComments}
         </span>
         {post.source === "youtube" && post.reposts > 0 && (
           <span>
-            <strong style={{ color: "var(--vl-text-heading)" }}>{post.reposts.toLocaleString()}</strong> views
+            <strong style={{ color: "var(--vl-text-heading)" }}>{post.reposts.toLocaleString()}</strong> {t.ideasViews}
           </span>
         )}
         {post.source !== "youtube" && post.reposts > 0 && (
           <span>
-            <strong style={{ color: "var(--vl-text-heading)" }}>{post.reposts.toLocaleString()}</strong> reposts
+            <strong style={{ color: "var(--vl-text-heading)" }}>{post.reposts.toLocaleString()}</strong> {t.ideasReposts}
           </span>
         )}
       </div>
@@ -174,7 +174,9 @@ function SwipeCard({ post, onClick }: { post: WinningPost; onClick: () => void }
   );
 }
 
-export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }) {
+export function DatabaseClient({ initialPosts, language = "en" }: { initialPosts: WinningPost[]; language?: ContentLanguage }) {
+  const t = getDashboardDict(language);
+  const isRtl = language === "ar";
   const [sourceTab, setSourceTab] = useState<SourceTab>("all");
   const [dateTab, setDateTab] = useState<DateTab>("all");
   const [search, setSearch] = useState("");
@@ -238,9 +240,9 @@ export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="text-[11px] uppercase tracking-[0.22em] mb-1" style={{ color: "var(--vl-accent)" }}>
-            Swipe File
+            {t.ideasTagline}
           </div>
-          <h1 className="text-3xl font-bold" style={{ color: "var(--vl-text-heading)" }}>Ideas</h1>
+          <h1 className="text-3xl font-bold" style={{ color: "var(--vl-text-heading)" }}>{t.ideasTitle}</h1>
         </div>
         <div className="flex items-center gap-3">
           <select
@@ -249,10 +251,10 @@ export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }
             value={sort}
             onChange={(e) => setSort(e.target.value as typeof sort)}
           >
-            <option value="createdAt">Newest added</option>
-            <option value="date">Newest published</option>
-            <option value="likes">Most liked</option>
-            <option value="comments">Most discussed</option>
+            <option value="createdAt">{t.ideasSortNewestAdded}</option>
+            <option value="date">{t.ideasSortNewestPublished}</option>
+            <option value="likes">{t.ideasSortMostLiked}</option>
+            <option value="comments">{t.ideasSortMostDiscussed}</option>
           </select>
           <select
             className="px-3 py-2 rounded-lg border text-sm outline-none"
@@ -260,9 +262,9 @@ export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
           >
-            <option value="">All types</option>
-            {types.map((t) => (
-              <option key={t} value={t}>{TYPE_LABELS[t] || t}</option>
+            <option value="">{t.ideasAllTypes}</option>
+            {types.map((typ) => (
+              <option key={typ} value={typ}>{t.ideasTypeLabel(typ)}</option>
             ))}
           </select>
         </div>
@@ -270,18 +272,18 @@ export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }
 
       {/* Date tabs */}
       <div className="flex items-center gap-2 mb-3">
-        {DATE_TABS.map((tab) => (
+        {DATE_TAB_VALUES.map((tab) => (
           <button
-            key={tab.value}
-            onClick={() => setDateTab(tab.value)}
+            key={tab}
+            onClick={() => setDateTab(tab)}
             className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
             style={
-              dateTab === tab.value
+              dateTab === tab
                 ? { background: "var(--vl-text-heading)", color: "#fff" }
                 : { background: "transparent", color: "var(--vl-text-muted)", border: "1px solid var(--vl-border)" }
             }
           >
-            {tab.label} ({dateCounts[tab.value]})
+            {dateLabel(t, tab)} ({dateCounts[tab]})
           </button>
         ))}
       </div>
@@ -299,14 +301,14 @@ export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }
                 : { background: "white", color: "var(--vl-text)", border: "1px solid var(--vl-border)" }
             }
           >
-            {SOURCE_LABELS[tab]} ({tabCounts[tab]})
+            {sourceLabel(t, tab)} ({tabCounts[tab]})
           </button>
         ))}
         <div className="flex-1" />
         <input
           className="px-4 py-2 rounded-full border text-sm outline-none w-64"
           style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)" }}
-          placeholder="Search posts..."
+          placeholder={t.ideasSearchPlaceholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -315,7 +317,7 @@ export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }
       {/* Cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((post) => (
-          <SwipeCard key={post.id} post={post} onClick={() => setDrawer(post)} />
+          <SwipeCard key={post.id} post={post} onClick={() => setDrawer(post)} t={t} isRtl={isRtl} />
         ))}
       </div>
 
@@ -324,12 +326,12 @@ export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }
           className="text-center py-16 text-sm"
           style={{ color: "var(--vl-text-muted)" }}
         >
-          No posts match your filters.
+          {t.ideasEmpty}
         </div>
       )}
 
       <div className="mt-4 text-xs" style={{ color: "var(--vl-text-muted)" }}>
-        {filtered.length} post{filtered.length !== 1 ? "s" : ""}
+        {t.ideasCountLabel(filtered.length)}
       </div>
 
       {/* Drawer */}
@@ -343,7 +345,7 @@ export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }
           >
             <button
               onClick={() => setDrawer(null)}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-lg"
+              className={`absolute top-4 ${isRtl ? "left-4" : "right-4"} w-8 h-8 flex items-center justify-center rounded-lg text-lg`}
               style={{ color: "var(--vl-text-muted)", border: "1px solid var(--vl-border)" }}
             >
               &times;
@@ -363,7 +365,7 @@ export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }
                 </div>
                 <div className="flex items-center gap-2 text-xs" style={{ color: "var(--vl-text-muted)" }}>
                   <img src={PLATFORM_ICONS[drawer.source]} alt={drawer.source} width={16} height={16} />
-                  {SOURCE_LABELS[drawer.source]} · {drawer.date}
+                  {sourceLabel(t, drawer.source)} · {drawer.date}
                 </div>
               </div>
             </div>
@@ -374,13 +376,13 @@ export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }
                 className="px-2.5 py-1 rounded text-xs font-medium"
                 style={{ background: "var(--vl-accent-glow)", color: "var(--vl-accent-hover)" }}
               >
-                {TYPE_LABELS[drawer.type] || drawer.type}
+                {t.ideasTypeLabel(drawer.type)}
               </span>
               <span className="text-xs" style={{ color: "var(--vl-text-muted)" }}>
-                <strong style={{ color: "var(--vl-text-heading)" }}>{drawer.likes.toLocaleString()}</strong> likes
+                <strong style={{ color: "var(--vl-text-heading)" }}>{drawer.likes.toLocaleString()}</strong> {t.ideasLikes}
               </span>
               <span className="text-xs" style={{ color: "var(--vl-text-muted)" }}>
-                <strong style={{ color: "var(--vl-text-heading)" }}>{drawer.comments.toLocaleString()}</strong> comments
+                <strong style={{ color: "var(--vl-text-heading)" }}>{drawer.comments.toLocaleString()}</strong> {t.ideasComments}
               </span>
             </div>
 
@@ -431,7 +433,7 @@ export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }
             {drawer.whyItWorked && (
               <div className="mb-5">
                 <div className="text-[10px] uppercase tracking-wider mb-1.5 font-medium" style={{ color: "var(--vl-text-muted)" }}>
-                  Why it worked
+                  {t.ideasWhyItWorked}
                 </div>
                 <div className="text-sm leading-relaxed" style={{ color: "var(--vl-text)" }}>
                   {drawer.whyItWorked}
@@ -449,7 +451,7 @@ export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }
                   className="px-4 py-2.5 rounded-lg text-sm font-medium"
                   style={{ background: "var(--vl-accent)", color: "#fff" }}
                 >
-                  Open original →
+                  {t.ideasOpenOriginal}
                 </a>
               )}
             </div>

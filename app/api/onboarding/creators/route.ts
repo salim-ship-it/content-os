@@ -18,8 +18,6 @@ export async function POST(request: NextRequest) {
     ? requested
     : DEFAULT_POSTS_PER_CREATOR;
 
-  const language: "en" | "ar" = body?.language === "ar" ? "ar" : "en";
-
   if (incoming.length === 0) {
     return Response.json({ error: "No creators provided" }, { status: 400 });
   }
@@ -67,7 +65,7 @@ export async function POST(request: NextRequest) {
     .upsert(
       {
         user_id: userId,
-        state: { creators_completed: true, posts_per_creator: postsPerCreator, language },
+        state: { creators_completed: true, posts_per_creator: postsPerCreator },
         completed: false,
       },
       { onConflict: "user_id" }

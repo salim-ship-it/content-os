@@ -4,19 +4,6 @@ import { readVoiceDraft, readVoiceProfile } from "@/lib/voice-storage";
 import { requireUser } from "@/lib/auth";
 import { PILLARS_DRAFT_PATH } from "@/lib/paths";
 import type { Pillars } from "@/lib/pillars";
-import { getSupabaseServer } from "@/lib/supabase-server";
-import type { ContentLanguage } from "@/lib/recommended-creators";
-
-async function readLanguage(userId: string): Promise<ContentLanguage> {
-  const supabase = await getSupabaseServer();
-  const { data } = await supabase
-    .from("user_onboarding")
-    .select("state")
-    .eq("user_id", userId)
-    .single();
-  const lang = (data?.state as { language?: string } | null)?.language;
-  return lang === "ar" ? "ar" : "en";
-}
 
 export const dynamic = "force-dynamic";
 
@@ -31,11 +18,10 @@ async function readPillars(): Promise<Pillars | null> {
 
 export default async function VoiceOnboardingPage() {
   const userId = await requireUser();
-  const [draft, profile, pillars, language] = await Promise.all([
+  const [draft, profile, pillars] = await Promise.all([
     readVoiceDraft(userId).catch(() => null),
     readVoiceProfile(userId).catch(() => null),
     readPillars(),
-    readLanguage(userId),
   ]);
 
   return (
@@ -43,7 +29,6 @@ export default async function VoiceOnboardingPage() {
       initialDraft={draft ?? { answers: {} }}
       initialProfile={profile}
       initialPillars={pillars}
-      language={language}
     />
   );
 }

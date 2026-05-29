@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import type { ContentLanguage } from "@/lib/recommended-creators";
-import { getDashboardDict, type DashboardDict } from "@/lib/i18n-dashboard";
 
 type Post = {
   id: string;
@@ -23,7 +21,7 @@ function firstLine(text: string): string {
   return (text || "").split("\n").map((s) => s.trim()).find((s) => s.length > 0) || "";
 }
 
-function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
+function AddUrlForm({ onSaved }: { onSaved: () => void }) {
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [url, setUrl] = useState("");
   const [notes, setNotes] = useState("");
@@ -36,7 +34,7 @@ function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
     if (!url.trim()) return;
     setSaving(true);
     setError(null);
-    setProgress(t.lmScraping);
+    setProgress("Scraping...");
     try {
       const res = await fetch("/api/lead-magnets", {
         method: "POST",
@@ -44,14 +42,14 @@ function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
         body: JSON.stringify({ url, notes }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t.errorGeneric);
+      if (!res.ok) throw new Error(data.error || "Failed to save");
       setUrl("");
       setNotes("");
-      setProgress(t.lmSaved);
+      setProgress("✓ Saved");
       setTimeout(() => setProgress(""), 2000);
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t.errorGeneric);
+      setError(e instanceof Error ? e.message : "Failed");
       setProgress("");
     } finally {
       setSaving(false);
@@ -64,7 +62,7 @@ function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
       .map((l) => l.trim())
       .filter((l) => /linkedin\.com/.test(l));
     if (urls.length === 0) {
-      setError(t.lmErrNoUrls);
+      setError("No LinkedIn URLs found. Paste one URL per line.");
       return;
     }
     setSaving(true);
@@ -73,7 +71,7 @@ function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
     let skipped = 0;
     let failed = 0;
     for (let i = 0; i < urls.length; i += 1) {
-      setProgress(t.lmBulkProgress(i + 1, urls.length));
+      setProgress(`Scraping ${i + 1}/${urls.length}...`);
       try {
         const res = await fetch("/api/lead-magnets", {
           method: "POST",
@@ -88,7 +86,7 @@ function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
       }
     }
     setBulkUrls("");
-    setProgress(t.lmBulkSummary(saved, skipped, failed));
+    setProgress(`✓ ${saved} saved · ${skipped} duplicates · ${failed} failed`);
     setTimeout(() => setProgress(""), 4000);
     setSaving(false);
     onSaved();
@@ -104,7 +102,7 @@ function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
           className="text-[11px] uppercase tracking-wider font-bold"
           style={{ color: "var(--vl-accent)" }}
         >
-          {t.lmAddTitle}
+          Add lead magnet posts
         </div>
         <div className="flex gap-2">
           <button
@@ -116,7 +114,7 @@ function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
               border: mode === "single" ? "none" : "1px solid var(--vl-border)",
             }}
           >
-            {t.lmSingleTab}
+            Single URL
           </button>
           <button
             onClick={() => setMode("bulk")}
@@ -127,7 +125,7 @@ function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
               border: mode === "bulk" ? "none" : "1px solid var(--vl-border)",
             }}
           >
-            {t.lmBulkTab}
+            Bulk paste
           </button>
         </div>
       </div>
@@ -137,14 +135,14 @@ function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
           <input
             className="flex-1 px-4 py-2.5 rounded-xl border text-sm outline-none"
             style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)" }}
-            placeholder={t.lmUrlPlaceholder}
+            placeholder="Paste LinkedIn post URL..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
           <input
             className="flex-1 px-4 py-2.5 rounded-xl border text-sm outline-none"
             style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)" }}
-            placeholder={t.lmNotesPlaceholder}
+            placeholder="Notes (optional)"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
@@ -154,7 +152,7 @@ function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
             className="px-5 py-2.5 rounded-xl text-sm font-bold transition-opacity disabled:opacity-40"
             style={{ background: "var(--vl-accent)", color: "white" }}
           >
-            {t.lmAdd}
+            Add
           </button>
         </div>
       )}
@@ -165,7 +163,7 @@ function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
             className="w-full resize-y px-4 py-3 rounded-xl border text-sm outline-none"
             style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)" }}
             rows={5}
-            placeholder={t.lmBulkPlaceholder}
+            placeholder={"Paste LinkedIn post URLs — one per line.\n\nTip: Go to your LinkedIn profile → Comments tab → use the bookmarklet below to copy all post URLs, then paste here."}
             value={bulkUrls}
             onChange={(e) => setBulkUrls(e.target.value)}
           />
@@ -176,10 +174,10 @@ function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
               className="px-5 py-2.5 rounded-xl text-sm font-bold transition-opacity disabled:opacity-40"
               style={{ background: "var(--vl-accent)", color: "white" }}
             >
-              {t.lmScrapeAll}
+              Scrape all
             </button>
             <span className="text-xs" style={{ color: "var(--vl-text-muted)" }}>
-              {t.lmBulkDetected(bulkUrls.split("\n").filter((l) => /linkedin\.com/.test(l)).length)}
+              {bulkUrls.split("\n").filter((l) => /linkedin\.com/.test(l)).length} URLs detected
             </span>
           </div>
         </div>
@@ -198,8 +196,8 @@ function AddUrlForm({ onSaved, t }: { onSaved: () => void; t: DashboardDict }) {
   );
 }
 
-function PostCard({ post, t }: { post: Post; t: DashboardDict }) {
-  const title = firstLine(post.content) || post.title || t.lmCardUntitled;
+function PostCard({ post }: { post: Post }) {
+  const title = firstLine(post.content) || post.title || "Untitled";
   const body = (post.content || "").slice(title.length).trim();
 
   return (
@@ -283,7 +281,7 @@ function PostCard({ post, t }: { post: Post; t: DashboardDict }) {
               <strong style={{ color: "var(--vl-text-heading)" }}>
                 {post.likes.toLocaleString()}
               </strong>{" "}
-              {t.lmCardLikes}
+              likes
             </span>
           )}
           {post.comments > 0 && (
@@ -291,7 +289,7 @@ function PostCard({ post, t }: { post: Post; t: DashboardDict }) {
               <strong style={{ color: "var(--vl-text-heading)" }}>
                 {post.comments.toLocaleString()}
               </strong>{" "}
-              {t.lmCardComments}
+              comments
             </span>
           )}
         </div>
@@ -300,8 +298,7 @@ function PostCard({ post, t }: { post: Post; t: DashboardDict }) {
   );
 }
 
-export function LeadMagnetsClient({ language = "en" }: { language?: ContentLanguage }) {
-  const t = getDashboardDict(language);
+export function LeadMagnetsClient() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -335,20 +332,20 @@ export function LeadMagnetsClient({ language = "en" }: { language?: ContentLangu
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
           <div className="text-[11px] uppercase tracking-[0.22em] mb-1" style={{ color: "var(--vl-accent)" }}>
-            {t.lmTagline}
+            Lead Magnets
           </div>
           <h1 className="text-3xl font-bold" style={{ color: "var(--vl-text-heading)" }}>
-            {t.lmTitle}
+            Swipe File
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--vl-text-muted)" }}>
-            {t.lmSubtitle(posts.length)}
+            {posts.length} lead magnet post{posts.length === 1 ? "" : "s"} saved
           </p>
         </div>
         <div className="flex items-center gap-2">
           <input
             className="px-4 py-2 rounded-full border text-sm outline-none w-56"
             style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)" }}
-            placeholder={t.lmSearchPlaceholder}
+            placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -357,26 +354,26 @@ export function LeadMagnetsClient({ language = "en" }: { language?: ContentLangu
             className="px-4 py-2 rounded-xl text-sm font-bold transition-colors"
             style={{ background: "var(--vl-accent)", color: "white" }}
           >
-            {t.lmCreateCta}
+            + Create a lead magnet
           </Link>
         </div>
       </div>
 
-      <AddUrlForm onSaved={fetchPosts} t={t} />
+      <AddUrlForm onSaved={fetchPosts} />
 
       {loading && (
         <div className="text-center py-16 text-sm" style={{ color: "var(--vl-text-muted)" }}>
-          {t.lmLoading}
+          Loading...
         </div>
       )}
 
       {!loading && filtered.length === 0 && (
         <div className="rounded-2xl border p-12 text-center" style={{ borderColor: "var(--vl-border)", background: "white" }}>
           <h2 className="text-xl font-bold mb-2" style={{ color: "var(--vl-text-heading)" }}>
-            {t.lmEmptyTitle}
+            No lead magnets yet
           </h2>
           <p className="text-sm" style={{ color: "var(--vl-text-muted)" }}>
-            {t.lmEmptyBody}
+            Paste a LinkedIn post URL above or wait for the daily comment scraper to populate this.
           </p>
         </div>
       )}
@@ -384,7 +381,7 @@ export function LeadMagnetsClient({ language = "en" }: { language?: ContentLangu
       {!loading && filtered.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((post) => (
-            <PostCard key={post.id} post={post} t={t} />
+            <PostCard key={post.id} post={post} />
           ))}
         </div>
       )}

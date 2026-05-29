@@ -10,7 +10,6 @@ import {
   writePillarsMarkdown,
 } from "@/lib/pillars";
 import { claudeFetch } from "@/lib/claude-fetch";
-import { getUserLanguage } from "@/lib/get-user-language";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -48,9 +47,7 @@ export async function POST() {
     return `**${q.question}**\n${formatted}`;
   }).join("\n\n");
 
-  const language = await getUserLanguage();
-
-  const systemPromptEn = `You are a voice profile synthesizer for a LinkedIn content system. You will receive answers to 12 voice discovery questions. Your job is to synthesize these into a structured voice profile in markdown format.
+  const systemPrompt = `You are a voice profile synthesizer for a LinkedIn content system. You will receive answers to 12 voice discovery questions. Your job is to synthesize these into a structured voice profile in markdown format.
 
 The profile must have these sections:
 1. **Identity** — Who they are, what they do, their positioning
@@ -65,33 +62,6 @@ The profile must have these sections:
 
 Be specific and actionable. Use their actual words where possible. This profile will be used by an AI to write LinkedIn posts in their voice.`;
 
-  const systemPromptAr = `أنت بتساعد على بناء ملف صوت لمنشورات لينكدإن. رح يوصلك ١٢ إجابة على أسئلة شخصية، ولازم تطلعها بصيغة Markdown مرتبة وواضحة.
-
-## قاعدة اللغة (مهم جدًا)
-اكتب كل شي بالعربي السهل اللي أي عربي يفهمه — مش فصحى ثقيلة، ومش ترجمة كلمة بكلمة من الإنجليزي. تخيل إنك تشرح لصديق على القهوة. كلمات عادية، جمل قصيرة، مفهومة من أول قراءة.
-
-- ممنوع: عبارات مترجمة حرفيًا، تعابير ثقيلة، كلمات قديمة ما حدا يستعملها
-- مطلوب: عربي بسيط، حديث، مباشر — اللي بنكتبه ع لينكدإن وفي الواتساب
-- خلي السطر يحكي زي ما الشخص بيحكي فعلًا، مش زي قاموس أو ترجمة قوقل
-
-## الأقسام (استعمل هاي العناوين)
-1. **هويتك** — مين أنت، شو بتعمل، وكيف بتقدم حالك
-2. **قناعاتك الأساسية** — شو الناس غالبًا غلطانة فيه، وشو رأيك المختلف
-3. **قصة البداية** — اللحظة اللي رسمت طريقك
-4. **أسلوبك بالكتابة** — إيقاع جملك، طول الفقرات، نوع الكلمات
-5. **اللي ما بتكتبه أبدًا** — كلمات وأساليب بترفضها
-6. **جمهورك** — لمين بتكتب، مين القارئ المثالي
-7. **نبرتك** — قديش بتمزح، رسمي ولا لأ، كيف بتسكر المنشور
-8. **كيف بتحكي على القهوة** — هيك بتحكي عن شغلك بشكل طبيعي
-9. **ملاحظات للذكاء الاصطناعي** — قواعد عملية لما يكتب بصوتك
-
-كن محدد، عملي، واستعمل كلمات الشخص الفعلية لما يمكن. هاد الملف رح يستعمله الذكاء الاصطناعي ليكتب منشورات لينكدإن بصوته.`;
-
-  const systemPrompt = language === "ar" ? systemPromptAr : systemPromptEn;
-  const userPrompt = language === "ar"
-    ? `هاي إجابات الـ ١٢ سؤال:\n\n${answersSummary}\n\nطلّع ملف صوت كامل بالعربي السهل، زي ما اتفقنا — مش ترجمة، مش فصحى ثقيلة.`
-    : `Here are the answers to the 12 voice discovery questions:\n\n${answersSummary}\n\nSynthesize these into a complete voice profile.`;
-
   const response = await claudeFetch(apiKey, {
     model: "claude-haiku-4-5",
     max_tokens: 4096,
@@ -99,7 +69,7 @@ Be specific and actionable. Use their actual words where possible. This profile 
     messages: [
       {
         role: "user",
-        content: userPrompt,
+        content: `Here are the answers to the 12 voice discovery questions:\n\n${answersSummary}\n\nSynthesize these into a complete voice profile.`,
       },
     ],
   });
@@ -119,7 +89,7 @@ Be specific and actionable. Use their actual words where possible. This profile 
   let pillarsError: string | null = null;
   try {
     const onboarding = await readOnboarding(userId);
-    pillars = await generatePillars(draft, onboarding, apiKey, language);
+    pillars = await generatePillars(draft, onboarding, apiKey);
     await writePillars(userId, pillars);
     const md = renderPillarsMarkdown(onboarding?.name ?? "Unknown", pillars);
     await writePillarsMarkdown(userId, md);

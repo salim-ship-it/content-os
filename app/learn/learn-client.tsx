@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import type { PostCoachCache } from "@/lib/post-coach";
-import type { ContentLanguage } from "@/lib/recommended-creators";
-import { getDashboardDict, type DashboardDict } from "@/lib/i18n-dashboard";
 
 function renderMarkdown(md: string) {
   const lines = md.split("\n");
@@ -31,7 +29,7 @@ function renderMarkdown(md: string) {
   return html.join("\n");
 }
 
-function CoachSection({ initialAnalysis, t, isRtl }: { initialAnalysis: PostCoachCache | null; t: DashboardDict; isRtl: boolean }) {
+function CoachSection({ initialAnalysis }: { initialAnalysis: PostCoachCache | null }) {
   const [analysis, setAnalysis] = useState(initialAnalysis);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,10 +40,10 @@ function CoachSection({ initialAnalysis, t, isRtl }: { initialAnalysis: PostCoac
     try {
       const res = await fetch("/api/post-coach", { method: "POST" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t.errorGeneric);
+      if (!res.ok) throw new Error(data.error || "Failed to generate analysis");
       setAnalysis(data.analysis);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t.errorGeneric);
+      setError(e instanceof Error ? e.message : "Failed to generate analysis");
     } finally {
       setLoading(false);
     }
@@ -56,13 +54,13 @@ function CoachSection({ initialAnalysis, t, isRtl }: { initialAnalysis: PostCoac
       <div className="flex items-center justify-between mb-4">
         <div>
           <div className="text-[11px] uppercase tracking-[0.22em] mb-1" style={{ color: "var(--vl-accent)" }}>
-            {t.learnCoachTagline}
+            AI Coach
           </div>
           <h2 className="text-2xl font-bold" style={{ color: "var(--vl-text-heading)" }}>
-            {t.learnCoachTitle}
+            What to do next
           </h2>
           <p className="text-sm mt-1" style={{ color: "var(--vl-text-muted)" }}>
-            {t.learnCoachSubtitle}
+            Analyzes your posts vs top creators and tells you exactly what to change
           </p>
         </div>
         <button
@@ -71,7 +69,7 @@ function CoachSection({ initialAnalysis, t, isRtl }: { initialAnalysis: PostCoac
           className="px-5 py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-50"
           style={{ background: "var(--vl-accent)", color: "white", boxShadow: "0 4px 14px rgba(249,115,22,0.25)" }}
         >
-          {loading ? t.learnAnalyzing : analysis ? t.learnRefresh : t.learnAnalyze}
+          {loading ? "Analyzing..." : analysis ? "Refresh analysis" : "Analyze my posts"}
         </button>
       </div>
 
@@ -84,10 +82,10 @@ function CoachSection({ initialAnalysis, t, isRtl }: { initialAnalysis: PostCoac
       {loading && (
         <div className="bg-white rounded-2xl border p-12 text-center" style={{ borderColor: "var(--vl-border)" }}>
           <div className="text-sm" style={{ color: "var(--vl-text-muted)" }}>
-            {t.learnLoadingMain}
+            Pulling your posts and comparing against top creators...
           </div>
           <div className="text-xs mt-2" style={{ color: "var(--vl-text-muted)" }}>
-            {t.learnLoadingSub}
+            This takes 15-30 seconds
           </div>
         </div>
       )}
@@ -99,13 +97,11 @@ function CoachSection({ initialAnalysis, t, isRtl }: { initialAnalysis: PostCoac
           />
           <div className="mt-6 pt-4 flex items-center justify-between text-[10px]" style={{ borderTop: "1px solid var(--vl-border)", color: "var(--vl-text-muted)" }}>
             <span>
-              {t.learnAnalysisFooter(analysis.myPostCount, analysis.creatorPostCount)}
+              Based on {analysis.myPostCount} of your posts vs {analysis.creatorPostCount} top creator posts
             </span>
             <span>
-              {t.learnGeneratedOn(
-                new Date(analysis.generatedAt).toLocaleDateString(isRtl ? "ar" : undefined),
-                new Date(analysis.generatedAt).toLocaleTimeString(isRtl ? "ar" : undefined),
-              )}
+              Generated {new Date(analysis.generatedAt).toLocaleDateString()} at{" "}
+              {new Date(analysis.generatedAt).toLocaleTimeString()}
             </span>
           </div>
         </div>
@@ -114,7 +110,9 @@ function CoachSection({ initialAnalysis, t, isRtl }: { initialAnalysis: PostCoac
       {!loading && !analysis && !error && (
         <div className="bg-white rounded-2xl border p-12 text-center" style={{ borderColor: "var(--vl-border)" }}>
           <p className="text-sm" style={{ color: "var(--vl-text-muted)" }}>
-            {t.learnEmptyHint}
+            Click &quot;Analyze my posts&quot; to get your first coaching report.
+            <br />
+            Make sure you&apos;ve logged posts on the Analytics page first.
           </p>
         </div>
       )}
@@ -122,7 +120,7 @@ function CoachSection({ initialAnalysis, t, isRtl }: { initialAnalysis: PostCoac
   );
 }
 
-function AddPostSection({ t }: { t: DashboardDict }) {
+function AddPostSection() {
   const [url, setUrl] = useState("");
   const [content, setContent] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -134,11 +132,11 @@ function AddPostSection({ t }: { t: DashboardDict }) {
 
   async function save() {
     if (!url.trim()) {
-      setError(t.learnErrUrl);
+      setError("Post URL is required.");
       return;
     }
     if (!content.trim()) {
-      setError(t.learnErrText);
+      setError("Post text is required.");
       return;
     }
     setError(null);
@@ -158,7 +156,7 @@ function AddPostSection({ t }: { t: DashboardDict }) {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t.learnErrSaveFail);
+      if (!res.ok) throw new Error(data.error || "Failed to save");
       setUrl("");
       setContent("");
       setLikes("");
@@ -166,7 +164,7 @@ function AddPostSection({ t }: { t: DashboardDict }) {
       setSaved(true);
       setTimeout(() => setSaved(false), 2200);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t.learnErrSaveFail);
+      setError(e instanceof Error ? e.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -176,23 +174,23 @@ function AddPostSection({ t }: { t: DashboardDict }) {
     <div className="mb-10">
       <div className="mb-6">
         <h2 className="text-xl font-bold mb-1" style={{ color: "var(--vl-text-heading)" }}>
-          {t.learnAddTitle}
+          Add a post
         </h2>
         <p className="text-sm" style={{ color: "var(--vl-text-muted)" }}>
-          {t.learnAddSubtitle}
+          Just published something? Paste the URL + text here so it shows up in Analytics and gets included in the next coaching report.
         </p>
       </div>
 
       <div className="bg-white rounded-2xl border p-6" style={{ borderColor: "var(--vl-border)" }}>
         <div className="mb-5">
           <label className="block text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--vl-text-muted)" }}>
-            {t.learnUrlLabel}
+            LinkedIn post URL
           </label>
           <input
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder={t.learnUrlPlaceholder}
+            placeholder="https://www.linkedin.com/posts/..."
             className="w-full px-4 py-3 rounded-xl border text-sm outline-none transition-colors focus:border-[var(--vl-accent)]"
             style={{ borderColor: "var(--vl-border)", background: "var(--vl-bg-soft)", color: "var(--vl-text)" }}
           />
@@ -200,13 +198,13 @@ function AddPostSection({ t }: { t: DashboardDict }) {
 
         <div className="mb-5">
           <label className="block text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--vl-text-muted)" }}>
-            {t.learnTextLabel}
+            Post text
           </label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={6}
-            placeholder={t.learnTextPlaceholder}
+            placeholder="Paste the full post copy..."
             className="w-full resize-y px-4 py-3 rounded-xl border text-sm outline-none transition-colors focus:border-[var(--vl-accent)]"
             style={{ borderColor: "var(--vl-border)", background: "var(--vl-bg-soft)", color: "var(--vl-text)" }}
           />
@@ -215,7 +213,7 @@ function AddPostSection({ t }: { t: DashboardDict }) {
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--vl-text-muted)" }}>
-              {t.learnDateLabel}
+              Date
             </label>
             <input
               type="date"
@@ -227,7 +225,7 @@ function AddPostSection({ t }: { t: DashboardDict }) {
           </div>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--vl-text-muted)" }}>
-              {t.learnLikesLabel}
+              Likes (optional)
             </label>
             <input
               type="number"
@@ -241,7 +239,7 @@ function AddPostSection({ t }: { t: DashboardDict }) {
           </div>
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--vl-text-muted)" }}>
-              {t.learnCommentsLabel}
+              Comments (optional)
             </label>
             <input
               type="number"
@@ -265,32 +263,30 @@ function AddPostSection({ t }: { t: DashboardDict }) {
             className="px-5 py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ background: "var(--vl-accent)", color: "white", boxShadow: "0 4px 14px rgba(249,115,22,0.25)" }}
           >
-            {saving ? t.learnSaving : t.learnSave}
+            {saving ? "Saving..." : "Save post"}
           </button>
-          {saved && <span className="text-xs font-semibold" style={{ color: "#16a34a" }}>{t.learnSaved}</span>}
+          {saved && <span className="text-xs font-semibold" style={{ color: "#16a34a" }}>✓ Added to Analytics</span>}
         </div>
       </div>
     </div>
   );
 }
 
-export function LearnClient({ initialAnalysis, language = "en" }: { initialAnalysis: PostCoachCache | null; language?: ContentLanguage }) {
-  const t = getDashboardDict(language);
-  const isRtl = language === "ar";
+export function LearnClient({ initialAnalysis }: { initialAnalysis: PostCoachCache | null }) {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
         <div className="text-[11px] uppercase tracking-[0.22em] mb-2" style={{ color: "var(--vl-accent)" }}>
-          {t.learnTagline}
+          Learn
         </div>
         <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--vl-text-heading)", letterSpacing: "-0.02em" }}>
-          {t.learnTitle}
+          Learn &amp; Improve
         </h1>
       </div>
 
-      <CoachSection initialAnalysis={initialAnalysis} t={t} isRtl={isRtl} />
+      <CoachSection initialAnalysis={initialAnalysis} />
 
-      <AddPostSection t={t} />
+      <AddPostSection />
     </div>
   );
 }

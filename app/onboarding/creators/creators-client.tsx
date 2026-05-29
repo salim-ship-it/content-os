@@ -2,18 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ContentLanguage, Industry, RecommendedCreator } from "@/lib/recommended-creators";
-import { dirFor, getDict, type OnboardingDict } from "@/lib/i18n-onboarding";
+import type { Industry, RecommendedCreator } from "@/lib/recommended-creators";
 
-type Step = "language" | "level" | "pick" | "paste";
-
-const TOTAL_STEPS = 3;
-const STEP_NUMBER: Record<Step, number> = {
-  language: 1,
-  level: 2,
-  pick: 2,
-  paste: 2,
-};
+type Step = "level" | "pick" | "paste";
 
 const POST_COUNT_OPTIONS = [10, 20, 50, 100] as const;
 const DEFAULT_POST_COUNT = 20;
@@ -79,16 +70,7 @@ function primaryAvatarUrl(c: { name: string; url: string; image?: string }): str
 
 export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls }: Props) {
   const router = useRouter();
-  const [step, setStep] = useState<Step>("language");
-  const [language, setLanguage] = useState<ContentLanguage>("en");
-  const filteredIndustries = useMemo(
-    () =>
-      industries.map((i) => ({
-        ...i,
-        creators: i.creators.filter((c) => (c.language ?? "en") === language),
-      })),
-    [industries, language]
-  );
+  const [step, setStep] = useState<Step>("level");
   const [activeIndustry, setActiveIndustry] = useState<string>(industries[0]?.id ?? "");
   const [selected, setSelected] = useState<SelectedCreator[]>([]);
   const [pasteRows, setPasteRows] = useState<string[]>(["", "", "", ""]);
@@ -98,22 +80,9 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
 
   const remaining = Math.max(0, maxCreators - selected.length);
   const industry = useMemo(
-    () => filteredIndustries.find((i) => i.id === activeIndustry),
-    [filteredIndustries, activeIndustry]
+    () => industries.find((i) => i.id === activeIndustry),
+    [industries, activeIndustry]
   );
-  const t = getDict(language);
-  const dir = dirFor(language);
-
-  function chooseLanguage(lang: ContentLanguage) {
-    setLanguage(lang);
-    setSelected([]);
-    setError(null);
-    try {
-      sessionStorage.setItem("vl.onboarding.languagePicked", "true");
-      window.dispatchEvent(new Event("vl:language-picked"));
-    } catch {}
-    setStep("level");
-  }
 
   function isSelected(url: string) {
     return selected.some((c) => c.url === url);
@@ -126,7 +95,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
       return;
     }
     if (selected.length >= maxCreators) {
-      setError(t.errMaxCreators(maxCreators));
+      setError(`You can pick up to ${maxCreators} creators. Remove one to add another.`);
       return;
     }
     setSelected((prev) => [...prev, { name: c.name, url: c.url }]);
@@ -138,7 +107,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
 
   async function handleSubmitBeginner() {
     if (selected.length === 0) {
-      setError(t.errPickAtLeastOne);
+      setError("Pick at least one creator to continue.");
       return;
     }
     await save(selected);
@@ -155,11 +124,11 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
       cleaned.push({ name: nameFromUrl(normalized), url: normalized });
     }
     if (cleaned.length === 0) {
-      setError(t.errAddValidUrl);
+      setError("Add at least one valid LinkedIn URL (https://www.linkedin.com/in/...).");
       return;
     }
     if (cleaned.length > maxCreators) {
-      setError(t.errMaxCreators(maxCreators));
+      setError(`You can add up to ${maxCreators} creators.`);
       return;
     }
     await save(cleaned);
@@ -172,80 +141,50 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
       const res = await fetch("/api/onboarding/creators", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ creators, postsPerCreator, language }),
+        body: JSON.stringify({ creators, postsPerCreator }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? t.errCouldNotSave);
+        throw new Error(data.error ?? "Could not save");
       }
       router.push("/onboarding/voice");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t.errCouldNotSave);
+      setError(e instanceof Error ? e.message : "Could not save");
     } finally {
       setSubmitting(false);
     }
   }
 
-  // -- Step 1: Language ------------------------------------------------------
-  if (step === "language") {
-    return (
-      <Shell dir={dir}>
-        <Header
-          title={t.langTitle}
-          subtitle={t.langSubtitle}
-          stepNumber={STEP_NUMBER.language}
-          t={t}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-          <ChoiceCard
-            title={t.langEnTitle}
-            body={t.langEnBody}
-            cta={t.langEnCta}
-            onClick={() => chooseLanguage("en")}
-          />
-          <ChoiceCard
-            title={t.langArTitle}
-            body={t.langArBody}
-            cta={t.langArCta}
-            onClick={() => chooseLanguage("ar")}
-          />
-        </div>
-      </Shell>
-    );
-  }
-
-  // -- Step 2: Beginner vs Experienced ---------------------------------------
+  // -- Step 1: Beginner vs Experienced ---------------------------------------
   if (step === "level") {
     return (
-      <Shell dir={dir}>
+      <Shell>
         <Header
-          title={t.levelTitle}
-          subtitle={t.levelSubtitle}
-          stepNumber={STEP_NUMBER.level}
-          t={t}
+          title="Pick the creators you'll learn from"
+          subtitle="We'll watch their posts daily and surface ideas in your inbox."
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
           <ChoiceCard
-            title={t.beginnerTitle}
-            body={t.beginnerBody}
-            cta={t.beginnerCta}
+            title="I'm new to LinkedIn"
+            body="See a recommended set of top creators, picked by industry. Pick up to 4."
+            cta="Show me recommendations"
             onClick={() => setStep("pick")}
           />
           <ChoiceCard
-            title={t.expertTitle}
-            body={t.expertBody(maxCreators)}
-            cta={t.expertCta}
+            title="I already have favorites"
+            body={`Paste up to ${maxCreators} LinkedIn profile URLs of creators you follow.`}
+            cta="Paste my own list"
             onClick={() => setStep("paste")}
           />
         </div>
-        <BackLink onClick={() => setStep("language")} label={t.back} />
         {existingUrls.length > 0 && (
           <p
             className="mt-6 text-xs"
             style={{ color: "var(--vl-text-muted)" }}
           >
-            {t.alreadyFollow(existingUrls.length)}
+            You already follow {existingUrls.length} creator{existingUrls.length === 1 ? "" : "s"}.
+            Adding new ones won't remove them.
           </p>
         )}
       </Shell>
@@ -255,12 +194,10 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
   // -- Step 2a: Beginner — recommended grid ----------------------------------
   if (step === "pick") {
     return (
-      <Shell dir={dir}>
+      <Shell>
         <Header
-          title={t.pickTitle}
-          subtitle={t.pickSubtitle}
-          stepNumber={STEP_NUMBER.pick}
-          t={t}
+          title="Pick up to 4 creators"
+          subtitle="Choose an industry, then tap a creator to add or remove."
           right={
             <span
               className="text-xs px-3 py-1.5 rounded-full"
@@ -269,13 +206,13 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
                 color: remaining === 0 ? "var(--vl-accent)" : "var(--vl-text-muted)",
               }}
             >
-              {t.pickedCounter(selected.length, maxCreators)}
+              {selected.length} / {maxCreators} picked
             </span>
           }
         />
 
         <div className="flex flex-wrap gap-2 mt-6">
-          {filteredIndustries.map((i) => {
+          {industries.map((i) => {
             const active = i.id === activeIndustry;
             return (
               <button
@@ -300,13 +237,14 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
               color: "var(--vl-text-muted)",
               opacity: 0.7,
             }}
+            title="We're adding more industries and creators soon."
           >
-            {t.moreIndustries}
+            More industries & creators
             <span
               className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded"
               style={{ color: "var(--vl-accent)", background: "var(--vl-accent-glow)" }}
             >
-              {t.soonBadge}
+              Soon
             </span>
           </span>
         </div>
@@ -315,19 +253,6 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
           <p className="mt-4 text-sm" style={{ color: "var(--vl-text-muted)" }}>
             {industry.description}
           </p>
-        )}
-
-        {industry && industry.creators.length === 0 && (
-          <div
-            className="mt-6 p-6 rounded-xl text-sm"
-            style={{
-              border: "1px dashed var(--vl-border)",
-              background: "var(--vl-bg-card)",
-              color: "var(--vl-text-muted)",
-            }}
-          >
-            {t.emptyLangCreators}
-          </div>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-6">
@@ -391,7 +316,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
           })}
         </div>
 
-        <PostCountSelector value={postsPerCreator} onChange={setPostsPerCreator} t={t} />
+        <PostCountSelector value={postsPerCreator} onChange={setPostsPerCreator} />
 
         {error && (
           <p className="mt-4 text-sm" style={{ color: "#dc2626" }}>
@@ -402,8 +327,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
         <Footer
           onBack={() => setStep("level")}
           onNext={handleSubmitBeginner}
-          backLabel={t.back}
-          nextLabel={submitting ? t.saving : t.continue_}
+          nextLabel={submitting ? "Saving…" : "Continue"}
           nextDisabled={submitting || selected.length === 0}
         />
       </Shell>
@@ -412,12 +336,10 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
 
   // -- Step 2b: Experienced — paste URLs -------------------------------------
   return (
-    <Shell dir={dir}>
+    <Shell>
       <Header
-        title={t.pasteTitle}
-        subtitle={t.pasteSubtitle}
-        stepNumber={STEP_NUMBER.paste}
-        t={t}
+        title="Paste up to 4 LinkedIn profiles"
+        subtitle="Just the URL of each creator's profile (e.g. https://www.linkedin.com/in/justinwelsh)."
       />
 
       <div className="space-y-3 mt-8">
@@ -427,8 +349,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
             type="text"
             value={row}
             onChange={(e) => updatePasteRow(i, e.target.value)}
-            placeholder={t.pastePlaceholder(i + 1)}
-            dir="ltr"
+            placeholder={`https://www.linkedin.com/in/creator-${i + 1}`}
             className="w-full px-4 py-3 rounded-lg text-sm"
             style={{
               border: "1px solid var(--vl-border)",
@@ -439,7 +360,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
         ))}
       </div>
 
-      <PostCountSelector value={postsPerCreator} onChange={setPostsPerCreator} t={t} />
+      <PostCountSelector value={postsPerCreator} onChange={setPostsPerCreator} />
 
       {error && (
         <p className="mt-4 text-sm" style={{ color: "#dc2626" }}>
@@ -450,8 +371,7 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
       <Footer
         onBack={() => setStep("level")}
         onNext={handleSubmitExperienced}
-        backLabel={t.back}
-        nextLabel={submitting ? t.saving : t.continue_}
+        nextLabel={submitting ? "Saving…" : "Continue"}
         nextDisabled={submitting}
       />
     </Shell>
@@ -461,11 +381,9 @@ export function CreatorsOnboardingClient({ industries, maxCreators, existingUrls
 function PostCountSelector({
   value,
   onChange,
-  t,
 }: {
   value: number;
   onChange: (n: number) => void;
-  t: OnboardingDict;
 }) {
   return (
     <div className="mt-8">
@@ -473,7 +391,7 @@ function PostCountSelector({
         className="text-[11px] uppercase tracking-[0.2em] mb-2"
         style={{ color: "var(--vl-text-muted)" }}
       >
-        {t.postsPerCreatorLabel}
+        Posts to scrape per creator
       </div>
       <div className="flex flex-wrap gap-2">
         {POST_COUNT_OPTIONS.map((n) => {
@@ -490,13 +408,13 @@ function PostCountSelector({
                 color: active ? "var(--vl-accent)" : "var(--vl-text-heading)",
               }}
             >
-              {t.postsCount(n)}
+              {n} posts
             </button>
           );
         })}
       </div>
       <p className="text-xs mt-2" style={{ color: "var(--vl-text-muted)" }}>
-        {t.postsPerCreatorHint}
+        We'll start scraping right after you continue. New posts arrive 1× per day after that.
       </p>
     </div>
   );
@@ -504,10 +422,9 @@ function PostCountSelector({
 
 // -- Layout helpers ----------------------------------------------------------
 
-function Shell({ children, dir }: { children: React.ReactNode; dir: "rtl" | "ltr" }) {
+function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div
-      dir={dir}
       className="min-h-screen flex items-start justify-center px-6 py-16"
       style={{ background: "var(--vl-bg)" }}
     >
@@ -520,14 +437,10 @@ function Header({
   title,
   subtitle,
   right,
-  stepNumber,
-  t,
 }: {
   title: string;
   subtitle?: string;
   right?: React.ReactNode;
-  stepNumber: number;
-  t: OnboardingDict;
 }) {
   return (
     <div className="flex items-start justify-between gap-4">
@@ -536,7 +449,7 @@ function Header({
           className="text-[11px] uppercase tracking-[0.2em] mb-3"
           style={{ color: "var(--vl-text-muted)" }}
         >
-          {t.stepLabel(stepNumber, TOTAL_STEPS)}
+          Onboarding · Step 1 of 2
         </div>
         <h1
           className="text-3xl font-bold"
@@ -556,19 +469,6 @@ function Header({
       </div>
       {right}
     </div>
-  );
-}
-
-function BackLink({ onClick, label }: { onClick: () => void; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="mt-8 text-xs uppercase tracking-[0.18em] hover:opacity-70 transition-opacity"
-      style={{ color: "var(--vl-text-muted)" }}
-    >
-      {label}
-    </button>
   );
 }
 
@@ -617,13 +517,11 @@ function Footer({
   onNext,
   nextLabel,
   nextDisabled,
-  backLabel,
 }: {
   onBack: () => void;
   onNext: () => void;
   nextLabel: string;
   nextDisabled: boolean;
-  backLabel: string;
 }) {
   return (
     <div className="flex items-center justify-between mt-10 pt-6" style={{ borderTop: "1px solid var(--vl-border)" }}>
@@ -633,7 +531,7 @@ function Footer({
         className="text-xs uppercase tracking-[0.18em] hover:opacity-70 transition-opacity"
         style={{ color: "var(--vl-text-muted)" }}
       >
-        {backLabel}
+        ← Back
       </button>
       <button
         type="button"

@@ -5,7 +5,6 @@ import { getSupabase } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth";
 import { REPO_ROOT, VOICE_PROFILE_PATH, POST_FORMATS_PATH, CREATOR_STYLES_DIR } from "@/lib/paths";
 import { claudeFetch } from "@/lib/claude-fetch";
-import { getUserLanguage } from "@/lib/get-user-language";
 
 const MODEL = "claude-haiku-4-5";
 
@@ -182,19 +181,7 @@ export async function POST(request: Request) {
   }
 
   const apiKey = await getApiKey();
-  const language = await getUserLanguage();
-  let systemPrompt = await buildSystemPrompt();
-  if (language === "ar") {
-    systemPrompt =
-      "## قاعدة اللغة (مهم جدًا)\n" +
-      "المستخدم بيحكي عربي. كل ردودك (الأفكار، المنشورات، التقييمات، الأسئلة، التعليقات) لازم تكون بالعربي السهل اللي أي عربي يفهمه — مش فصحى ثقيلة، ومش ترجمة كلمة بكلمة من الإنجليزي.\n\n" +
-      "- اكتب زي ما تحكي على القهوة مع صديق ذكي: جمل قصيرة، كلمات عادية، مباشر.\n" +
-      "- ممنوع: تعابير مترجمة حرفيًا، كلمات قديمة ما حدا يستعملها، أسلوب رسمي زي الجرايد.\n" +
-      "- مطلوب: عربي حديث، طبيعي، مفهوم من أول قراءة — اللي بنكتبه ع لينكدإن وفي الواتساب.\n" +
-      "- الأسماء الخاصة (Justin Welsh، Clay، Claude...) والروابط والمصطلحات التقنية اللي ما إلها مقابل عربي مفهوم خلّيها بالإنجليزي.\n" +
-      "- لما تكتب منشور لينكدإن بالعربي، خليه يحس طبيعي للقارئ العربي — مش ترجمة، إنشاء أصلي.\n\n" +
-      systemPrompt;
-  }
+  const systemPrompt = await buildSystemPrompt();
 
   const response = await claudeFetch(apiKey, {
     model: MODEL,

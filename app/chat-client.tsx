@@ -2,8 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
-import type { ContentLanguage } from "@/lib/recommended-creators";
-import { getDashboardDict, type ChatCommand } from "@/lib/i18n-dashboard";
 
 type Message = {
   role: "user" | "assistant";
@@ -37,17 +35,51 @@ function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function autoTitle(messages: Message[], fallback: string): string {
+function autoTitle(messages: Message[]): string {
   const first = messages.find((m) => m.role === "user");
-  if (!first) return fallback;
+  if (!first) return "New conversation";
   const text = first.content.replace(/\n/g, " ").trim();
   return text.length > 60 ? text.slice(0, 57) + "..." : text;
 }
 
-export function ChatClient({ language = "en" }: { language?: ContentLanguage }) {
-  const t = getDashboardDict(language);
-  const isRtl = language === "ar";
-  const COMMANDS = t.commands;
+const COMMANDS = [
+  {
+    label: "Suggest ideas",
+    icon: "💡",
+    prompt: "Suggest me 5 content ideas I can write about this week. Pick from the top-performing posts in my database and give me a unique angle for each one.",
+  },
+  {
+    label: "Write in creator style",
+    icon: "✍️",
+    prompt: "Write a LinkedIn post in the style of ",
+    partial: true,
+  },
+  {
+    label: "Score my post",
+    icon: "📊",
+    prompt: "Score this post using the 6-dimension rubric (AI Smell, Hook, CTA, Format, Structure, Storytelling). Give me the score out of 60 and one fix per dimension:\n\n",
+    partial: true,
+  },
+  {
+    label: "Iterate post",
+    icon: "🔄",
+    prompt: "Take this post and improve it based on my voice profile. Keep what works, fix what doesn't:\n\n",
+    partial: true,
+  },
+  {
+    label: "Change the hook",
+    icon: "🎣",
+    prompt: "Give me 10 hook variations for this post idea. Mix emotional triggers (Desire, Curiosity, Fear). Each hook should be under 10 words:\n\n",
+    partial: true,
+  },
+  {
+    label: "Create a lead magnet",
+    icon: "🧲",
+    prompt: "I want to create a lead magnet LinkedIn post. First, fetch my saved lead magnet posts from /api/lead-magnets to see what's been working in my swipe file. Then help me create a new lead magnet post by:\n\n1. Ask me what topic/resource I want to offer (playbook, template, checklist, vault, etc.)\n2. Show me 3 post structures inspired by the highest-engagement lead magnet posts in my swipe file\n3. Write the full post draft using the winning patterns: strong hook, clear value stack, social proof if I have it, and a comment-trigger CTA\n4. Score it against the best lead magnets in my database\n\nStart by pulling my lead magnet swipe file and telling me what patterns are winning.",
+  },
+];
+
+export function ChatClient() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -83,14 +115,14 @@ export function ChatClient({ language = "en" }: { language?: ContentLanguage }) 
         if (existing) {
           next = prev.map((c) =>
             c.id === id
-              ? { ...c, messages: msgs, title: autoTitle(msgs, t.newChat), updatedAt: new Date().toISOString() }
+              ? { ...c, messages: msgs, title: autoTitle(msgs), updatedAt: new Date().toISOString() }
               : c,
           );
         } else {
           next = [
             {
               id,
-              title: autoTitle(msgs, t.newChat),
+              title: autoTitle(msgs),
               messages: msgs,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
@@ -160,7 +192,7 @@ export function ChatClient({ language = "en" }: { language?: ContentLanguage }) 
       setMessages(withReply);
       persist(convoId, withReply);
     } catch (e: unknown) {
-      const errMsg = [...nextMessages, { role: "assistant" as const, content: `${t.errorPrefix}: ${e instanceof Error ? e.message : t.errorGeneric}` }];
+      const errMsg = [...nextMessages, { role: "assistant" as const, content: `Error: ${e instanceof Error ? e.message : "Something went wrong"}` }];
       setMessages(errMsg);
       persist(convoId, errMsg);
     } finally {
@@ -168,7 +200,7 @@ export function ChatClient({ language = "en" }: { language?: ContentLanguage }) 
     }
   }
 
-  function handleCommand(cmd: ChatCommand) {
+  function handleCommand(cmd: (typeof COMMANDS)[number]) {
     if (cmd.partial) {
       setInput(cmd.prompt);
       inputRef.current?.focus();
@@ -197,11 +229,11 @@ export function ChatClient({ language = "en" }: { language?: ContentLanguage }) 
             className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
             style={{ background: "var(--vl-accent)", color: "white" }}
           >
-            {t.newChat}
+            + New chat
           </button>
           {activeId && (
             <span className="text-xs font-medium truncate max-w-xs" style={{ color: "var(--vl-text-muted)" }}>
-              {conversations.find((c) => c.id === activeId)?.title || t.currentChat}
+              {conversations.find((c) => c.id === activeId)?.title || "Current"}
             </span>
           )}
         </div>
@@ -211,7 +243,7 @@ export function ChatClient({ language = "en" }: { language?: ContentLanguage }) 
             className="text-xs font-semibold"
             style={{ color: "var(--vl-accent)" }}
           >
-            {showHistory ? t.hideHistory : t.historyCount(conversations.length)}
+            {showHistory ? "Hide history" : `History (${conversations.length})`}
           </button>
         )}
       </div>
@@ -232,7 +264,7 @@ export function ChatClient({ language = "en" }: { language?: ContentLanguage }) 
                 }}
                 onClick={() => loadConversation(convo.id)}
               >
-                <div className={`flex-1 min-w-0 ${isRtl ? "ml-3" : "mr-3"}`}>
+                <div className="flex-1 min-w-0 mr-3">
                   <div
                     className="text-sm font-medium truncate"
                     style={{ color: convo.id === activeId ? "var(--vl-accent-hover)" : "var(--vl-text-heading)" }}
@@ -240,7 +272,7 @@ export function ChatClient({ language = "en" }: { language?: ContentLanguage }) 
                     {convo.title}
                   </div>
                   <div className="text-[10px]" style={{ color: "var(--vl-text-muted)" }}>
-                    {t.messagesCount(convo.messages.length)} · {new Date(convo.updatedAt).toLocaleDateString(isRtl ? "ar" : undefined)}
+                    {convo.messages.length} messages · {new Date(convo.updatedAt).toLocaleDateString()}
                   </div>
                 </div>
                 <button
@@ -250,7 +282,7 @@ export function ChatClient({ language = "en" }: { language?: ContentLanguage }) 
                   }}
                   className="text-sm px-1 transition-colors hover:text-[#ef4444]"
                   style={{ color: "var(--vl-text-muted)" }}
-                  title={t.deleteChat}
+                  title="Delete"
                 >
                   ×
                 </button>
@@ -266,22 +298,22 @@ export function ChatClient({ language = "en" }: { language?: ContentLanguage }) 
           <div className="flex flex-col items-center justify-center h-full px-6">
             <div className="max-w-2xl w-full text-center">
               <div className="text-[11px] uppercase tracking-[0.22em] mb-4" style={{ color: "var(--vl-accent)" }}>
-                {t.brandTagline}
+                Content OS
               </div>
               <h1
                 className="text-4xl font-bold mb-3"
                 style={{ color: "var(--vl-text-heading)", letterSpacing: "-0.02em" }}
               >
-                {t.homeTitle}
+                What do you want to write?
               </h1>
               <p className="text-lg mb-10" style={{ color: "var(--vl-text-muted)" }}>
-                {t.homeSubtitle}
+                Search ideas, imitate a post, draft content, score your writing.
               </p>
 
               <div className="flex flex-wrap justify-center gap-2 mb-10">
                 {COMMANDS.map((cmd) => (
                   <button
-                    key={cmd.key}
+                    key={cmd.label}
                     onClick={() => handleCommand(cmd)}
                     className="px-4 py-2.5 rounded-full border text-sm font-medium transition-all hover:shadow-sm"
                     style={{ borderColor: "var(--vl-border)", color: "var(--vl-text-heading)", background: "white" }}
@@ -296,7 +328,6 @@ export function ChatClient({ language = "en" }: { language?: ContentLanguage }) 
                   >
                     {cmd.icon} {cmd.label}
                   </button>
-
                 ))}
               </div>
             </div>
@@ -361,7 +392,7 @@ export function ChatClient({ language = "en" }: { language?: ContentLanguage }) 
             <div className="flex flex-wrap gap-1.5 mb-3">
               {COMMANDS.map((cmd) => (
                 <button
-                  key={cmd.key}
+                  key={cmd.label}
                   onClick={() => handleCommand(cmd)}
                   disabled={loading}
                   className="px-3 py-1.5 rounded-full border text-xs font-medium transition-colors disabled:opacity-50"
@@ -379,15 +410,15 @@ export function ChatClient({ language = "en" }: { language?: ContentLanguage }) 
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={t.inputPlaceholder}
+              placeholder="Search ideas, imitate a post, draft content..."
               rows={1}
-              className={`w-full resize-none px-5 py-4 ${isRtl ? "pl-14" : "pr-14"} rounded-2xl text-sm outline-none`}
+              className="w-full resize-none px-5 py-4 pr-14 rounded-2xl text-sm outline-none"
               style={{ color: "var(--vl-text)", background: "transparent", minHeight: 52, maxHeight: 200 }}
             />
             <button
               onClick={() => send()}
               disabled={!input.trim() || loading}
-              className={`absolute ${isRtl ? "left-3" : "right-3"} bottom-3 w-9 h-9 rounded-full flex items-center justify-center transition-colors disabled:opacity-30`}
+              className="absolute right-3 bottom-3 w-9 h-9 rounded-full flex items-center justify-center transition-colors disabled:opacity-30"
               style={{
                 background: input.trim() ? "var(--vl-accent)" : "var(--vl-bg-card)",
                 color: input.trim() ? "#fff" : "var(--vl-text-muted)",
@@ -402,7 +433,7 @@ export function ChatClient({ language = "en" }: { language?: ContentLanguage }) 
           <div className="flex items-center justify-center gap-2 mt-3">
             <div className="text-[11px] flex items-center gap-1.5" style={{ color: "var(--vl-text-muted)" }}>
               <span style={{ fontSize: 14 }}>✦</span>
-              {t.modelLabel}
+              Claude Sonnet 4.6
             </div>
           </div>
         </div>

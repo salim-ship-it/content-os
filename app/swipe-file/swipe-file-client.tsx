@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { WinningPost } from "@/lib/winning-posts";
 import { slugifyCreator } from "@/lib/creator-analysis";
-import type { ContentLanguage } from "@/lib/recommended-creators";
-import { getDashboardDict, type DashboardDict } from "@/lib/i18n-dashboard";
 
 type CreatorSummary = {
   creator: string;
@@ -70,7 +68,7 @@ function CoverPlaceholder({ creator }: { creator: string }) {
   );
 }
 
-function CreatorTile({ summary, t, isRtl }: { summary: CreatorSummary; t: DashboardDict; isRtl: boolean }) {
+function CreatorTile({ summary }: { summary: CreatorSummary }) {
   return (
     <Link
       href={`/swipe-file/${summary.slug}`}
@@ -98,10 +96,10 @@ function CreatorTile({ summary, t, isRtl }: { summary: CreatorSummary; t: Dashbo
           <CoverPlaceholder creator={summary.creator} />
         </div>
         <span
-          className={`absolute top-2.5 ${isRtl ? "left-2.5" : "right-2.5"} px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm`}
+          className="absolute top-2.5 right-2.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm"
           style={{ background: "rgba(255,255,255,0.92)", color: "var(--vl-accent-hover)" }}
         >
-          {t.swipePostsBadge(summary.postCount)}
+          {summary.postCount} posts
         </span>
       </div>
 
@@ -118,11 +116,11 @@ function CreatorTile({ summary, t, isRtl }: { summary: CreatorSummary; t: Dashbo
             <strong style={{ color: "var(--vl-text-heading)" }}>
               {summary.avgLikes.toLocaleString()}
             </strong>{" "}
-            {t.swipeAvgLikes}
+            avg likes
           </span>
           <span>·</span>
           <span>
-            {t.swipeBest}{" "}
+            best{" "}
             <strong style={{ color: "var(--vl-text-heading)" }}>
               {summary.bestLikes.toLocaleString()}
             </strong>
@@ -138,9 +136,7 @@ function CreatorTile({ summary, t, isRtl }: { summary: CreatorSummary; t: Dashbo
   );
 }
 
-export function SwipeFileClient({ posts, language = "en" }: { posts: WinningPost[]; language?: ContentLanguage }) {
-  const t = getDashboardDict(language);
-  const isRtl = language === "ar";
+export function SwipeFileClient({ posts }: { posts: WinningPost[] }) {
   const [search, setSearch] = useState("");
 
   const summaries = useMemo(() => summarizeCreators(posts), [posts]);
@@ -157,19 +153,20 @@ export function SwipeFileClient({ posts, language = "en" }: { posts: WinningPost
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="text-[11px] uppercase tracking-[0.22em] mb-1" style={{ color: "var(--vl-accent)" }}>
-            {t.swipeTagline}
+            Swipe File
           </div>
           <h1 className="text-3xl font-bold" style={{ color: "var(--vl-text-heading)" }}>
-            {t.swipeTitle}
+            Creators
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--vl-text-muted)" }}>
-            {t.swipeSubtitle(summaries.length, posts.length)}
+            {summaries.length} tracked creator{summaries.length === 1 ? "" : "s"} ·{" "}
+            {posts.length} posts · click a tile to open the dashboard
           </p>
         </div>
         <input
           className="px-4 py-2 rounded-full border text-sm outline-none w-64"
           style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)" }}
-          placeholder={t.swipeSearchPlaceholder}
+          placeholder="Search creators..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -178,13 +175,13 @@ export function SwipeFileClient({ posts, language = "en" }: { posts: WinningPost
       {/* Creator tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {filtered.map((summary) => (
-          <CreatorTile key={summary.slug} summary={summary} t={t} isRtl={isRtl} />
+          <CreatorTile key={summary.slug} summary={summary} />
         ))}
       </div>
 
       {filtered.length === 0 && (
         <div className="text-center py-16 text-sm" style={{ color: "var(--vl-text-muted)" }}>
-          {t.swipeEmpty}
+          No creators match your search.
         </div>
       )}
     </div>

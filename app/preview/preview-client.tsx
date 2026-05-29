@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type { ContentLanguage } from "@/lib/recommended-creators";
-import { getDashboardDict, type DashboardDict } from "@/lib/i18n-dashboard";
 
 type ViewMode = "both" | "desktop" | "mobile";
 
@@ -25,7 +23,7 @@ function renderPostHTML(text: string): string {
     .replace(/(^|\s)(@[\p{L}\p{N}_.-]+)/gu, `$1<span style="${blue}">$2</span>`);
 }
 
-function LinkedInPost({ text, name, headline, viewMode, t }: { text: string; name: string; headline: string; viewMode: "desktop" | "mobile"; t: DashboardDict }) {
+function LinkedInPost({ text, name, headline, viewMode }: { text: string; name: string; headline: string; viewMode: "desktop" | "mobile" }) {
   const isMobile = viewMode === "mobile";
   const containerWidth = isMobile ? 375 : 555;
   const padding = isMobile ? 12 : 16;
@@ -45,7 +43,7 @@ function LinkedInPost({ text, name, headline, viewMode, t }: { text: string; nam
       {/* Device frame label */}
       <div className="text-center mb-3">
         <span className="text-xs font-medium px-3 py-1 rounded-full" style={{ background: "var(--vl-bg-card)", color: "var(--vl-text-muted)" }}>
-          {isMobile ? t.previewDeviceMobile : t.previewDeviceDesktop} · {containerWidth}px
+          {isMobile ? "📱 Mobile" : "🖥️ Desktop"} · {containerWidth}px
         </span>
       </div>
 
@@ -97,7 +95,7 @@ function LinkedInPost({ text, name, headline, viewMode, t }: { text: string; nam
               <div style={{ fontSize: 12, color: "#999", lineHeight: 1.5 }}>1d · 🌐</div>
             </div>
             <div style={{ color: "#0a66c2", fontSize: 14, fontWeight: 600, flexShrink: 0 }}>
-              {t.previewFollow}
+              + Follow
             </div>
           </div>
         </div>
@@ -132,7 +130,7 @@ function LinkedInPost({ text, name, headline, viewMode, t }: { text: string; nam
                 cursor: "pointer",
               }}
             >
-              {t.previewSeeMore}
+              …see more
             </button>
           )}
         </div>
@@ -150,7 +148,7 @@ function LinkedInPost({ text, name, headline, viewMode, t }: { text: string; nam
         >
           <span>👍❤️</span>
           <span>42</span>
-          <span style={{ marginLeft: "auto" }}>{t.previewEngagement(42, 5, 2).split(" · ").slice(1).join(" · ")}</span>
+          <span style={{ marginLeft: "auto" }}>5 comments · 2 reposts</span>
         </div>
 
         {/* Action buttons */}
@@ -163,7 +161,7 @@ function LinkedInPost({ text, name, headline, viewMode, t }: { text: string; nam
             justifyContent: "space-around",
           }}
         >
-          {[t.previewActionLike, t.previewActionComment, t.previewActionRepost, t.previewActionSend].map((action) => (
+          {["👍 Like", "💬 Comment", "🔄 Repost", "📤 Send"].map((action) => (
             <button
               key={action}
               style={{
@@ -184,16 +182,15 @@ function LinkedInPost({ text, name, headline, viewMode, t }: { text: string; nam
 
       {/* Stats below */}
       <div className="mt-3 flex gap-4 justify-center text-xs" style={{ color: "var(--vl-text-muted)" }}>
-        <span>{charCount} {t.previewCharsLabel}</span>
-        <span>{lineCount} {t.previewLinesLabel}</span>
-        <span>{expanded ? t.previewStatsExpanded : t.previewStatsFeed}</span>
+        <span>{charCount} chars</span>
+        <span>{lineCount} lines</span>
+        <span>{expanded ? "expanded" : "feed view (3 lines)"}</span>
       </div>
     </div>
   );
 }
 
-export function PreviewClient({ language = "en" }: { language?: ContentLanguage }) {
-  const t = getDashboardDict(language);
+export function PreviewClient() {
   const [text, setText] = useState("");
   const [name, setName] = useState("Salim Sraj");
   const [headline, setHeadline] = useState("CEO @ VectorLabs Pro · GTM Engineer · Building outbound systems for B2B SaaS");
@@ -209,10 +206,10 @@ export function PreviewClient({ language = "en" }: { language?: ContentLanguage 
       <div className="flex items-center justify-between mb-6">
         <div>
           <div className="text-[11px] uppercase tracking-[0.22em] mb-1" style={{ color: "var(--vl-accent)" }}>
-            {t.previewTagline}
+            Preview
           </div>
           <h1 className="text-3xl font-bold" style={{ color: "var(--vl-text-heading)" }}>
-            {t.previewTitle}
+            Post Preview
           </h1>
         </div>
         <div className="flex items-center gap-2">
@@ -227,7 +224,7 @@ export function PreviewClient({ language = "en" }: { language?: ContentLanguage 
                   : { background: "white", color: "var(--vl-text)", border: "1px solid var(--vl-border)" }
               }
             >
-              {mode === "both" ? t.previewModeBoth : mode === "desktop" ? t.previewModeDesktop : t.previewModeMobile}
+              {mode === "both" ? "Both" : mode === "desktop" ? "🖥️ Desktop" : "📱 Mobile"}
             </button>
           ))}
         </div>
@@ -239,7 +236,7 @@ export function PreviewClient({ language = "en" }: { language?: ContentLanguage 
           <div className="bg-white rounded-2xl border p-5 sticky top-6" style={{ borderColor: "var(--vl-border)" }}>
             <div className="mb-3">
               <div className="text-[10px] uppercase tracking-wider mb-1.5 font-medium" style={{ color: "var(--vl-text-muted)" }}>
-                {t.previewNameLabel}
+                Your name
               </div>
               <input
                 className="w-full px-3 py-2 rounded-lg border text-sm outline-none"
@@ -250,7 +247,7 @@ export function PreviewClient({ language = "en" }: { language?: ContentLanguage 
             </div>
             <div className="mb-3">
               <div className="text-[10px] uppercase tracking-wider mb-1.5 font-medium" style={{ color: "var(--vl-text-muted)" }}>
-                {t.previewHeadlineLabel}
+                Headline
               </div>
               <input
                 className="w-full px-3 py-2 rounded-lg border text-sm outline-none"
@@ -261,12 +258,12 @@ export function PreviewClient({ language = "en" }: { language?: ContentLanguage 
             </div>
             <div className="mb-3">
               <div className="text-[10px] uppercase tracking-wider mb-1.5 font-medium" style={{ color: "var(--vl-text-muted)" }}>
-                {t.previewContentLabel}
+                Post content
               </div>
               <textarea
                 className="w-full px-3 py-2 rounded-lg border text-sm outline-none resize-none"
                 style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)", minHeight: 300 }}
-                placeholder={t.previewContentPlaceholder}
+                placeholder="Paste your post here..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
               />
@@ -278,25 +275,25 @@ export function PreviewClient({ language = "en" }: { language?: ContentLanguage 
                 <div className="text-lg font-bold" style={{ color: charCount > 3000 ? "#ef4444" : charCount > 1300 ? "#f59e0b" : "var(--vl-text-heading)" }}>
                   {charCount}
                 </div>
-                <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--vl-text-muted)" }}>{t.previewCharsLabel}</div>
+                <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--vl-text-muted)" }}>chars</div>
               </div>
               <div className="rounded-lg p-2.5 text-center" style={{ background: "var(--vl-bg-card)" }}>
                 <div className="text-lg font-bold" style={{ color: "var(--vl-text-heading)" }}>
                   {wordCount}
                 </div>
-                <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--vl-text-muted)" }}>{t.previewWordsLabel}</div>
+                <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--vl-text-muted)" }}>words</div>
               </div>
               <div className="rounded-lg p-2.5 text-center" style={{ background: "var(--vl-bg-card)" }}>
                 <div className="text-lg font-bold" style={{ color: "var(--vl-text-heading)" }}>
                   {lineCount}
                 </div>
-                <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--vl-text-muted)" }}>{t.previewLinesLabel}</div>
+                <div className="text-[10px] uppercase tracking-wider" style={{ color: "var(--vl-text-muted)" }}>lines</div>
               </div>
             </div>
 
             {/* LinkedIn limits info */}
             <div className="mt-3 text-xs leading-relaxed" style={{ color: "var(--vl-text-muted)" }}>
-              {t.previewLimitsBody}
+              <strong>LinkedIn limits:</strong> 3,000 chars max. Feed shows 3 lines before &quot;…see more&quot; — what&apos;s visible above depends on your line breaks. Sweet spot: 600–1,300 chars.
             </div>
           </div>
         </div>
@@ -305,16 +302,16 @@ export function PreviewClient({ language = "en" }: { language?: ContentLanguage 
         <div className="col-span-7">
           {!text && (
             <div className="text-center py-20" style={{ color: "var(--vl-text-muted)" }}>
-              {t.previewEmpty}
+              Paste your post on the left to see the preview
             </div>
           )}
           {text && (
             <div className={`flex ${viewMode === "both" ? "gap-6" : "justify-center"}`}>
               {(viewMode === "both" || viewMode === "desktop") && (
-                <LinkedInPost text={text} name={name} headline={headline} viewMode="desktop" t={t} />
+                <LinkedInPost text={text} name={name} headline={headline} viewMode="desktop" />
               )}
               {(viewMode === "both" || viewMode === "mobile") && (
-                <LinkedInPost text={text} name={name} headline={headline} viewMode="mobile" t={t} />
+                <LinkedInPost text={text} name={name} headline={headline} viewMode="mobile" />
               )}
             </div>
           )}

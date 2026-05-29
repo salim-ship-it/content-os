@@ -1,11 +1,8 @@
-export type ContentLanguage = "en" | "ar";
-
 export type RecommendedCreator = {
   name: string;
   url: string;
   image?: string;
   note?: string;
-  language?: ContentLanguage;
 };
 
 export type Industry = {
@@ -29,8 +26,6 @@ export const INDUSTRIES: Industry[] = [
       { name: "Tima Elhajj", url: "https://www.linkedin.com/in/timaelhajj/", image: "/creators/timaelhajj.jpg" },
       { name: "Justin Welsh", url: "https://www.linkedin.com/in/justinwelsh/", image: "/creators/justinwelsh.jpg" },
       { name: "Paolo Trivellato", url: "https://www.linkedin.com/in/leadgenwiz/", image: "/creators/leadgenwiz.jpg" },
-      { name: "Khaled Elahmad", url: "https://www.linkedin.com/in/khaledelahmad/", language: "ar" },
-      { name: "Jude Al Saleh", url: "https://www.linkedin.com/in/judealsaleh/", language: "ar" },
     ],
   },
   {
@@ -122,11 +117,4 @@ export const MAX_CREATORS_PER_USER = 4;
 
 export function findIndustry(id: string): Industry | undefined {
   return INDUSTRIES.find((i) => i.id === id);
-}
-
-export function industriesForLanguage(language: ContentLanguage): Industry[] {
-  return INDUSTRIES.map((i) => ({
-    ...i,
-    creators: i.creators.filter((c) => (c.language ?? "en") === language),
-  }));
 }

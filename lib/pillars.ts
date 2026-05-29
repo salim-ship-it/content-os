@@ -124,7 +124,6 @@ export async function generatePillars(
   voice: VoiceDraft,
   onboarding: Onboarding | null,
   apiKey: string,
-  language: "en" | "ar" = "en",
 ): Promise<Pillars> {
   const userPrompt = `VOICE PROFILE (raw answers):
 ${JSON.stringify(voice.answers, null, 2)}
@@ -134,14 +133,10 @@ ${JSON.stringify(onboarding ?? { name: "Unknown" }, null, 2)}
 
 Generate the content pillars JSON now.`;
 
-  const system = language === "ar"
-    ? `## قاعدة اللغة (مهم جدًا)\nكل قيم النصوص في الـ JSON الناتج لازم تكون بالعربي السهل اللي أي عربي يفهمه — مش فصحى ثقيلة، مش ترجمة كلمة بكلمة من الإنجليزي، مش كلمات قديمة. اكتب زي ما تحكي ع القهوة: جمل قصيرة، كلمات عادية، مباشر.\n\nهاد ينطبق على: الأسماء (name)، الأوصاف (description)، الأهداف (purposes)، الزوايا (angle)، الفئات (category)، الأفكار (ideas)، والدعوات للفعل (ctas).\n\nخلّي مفاتيح JSON والقيم الثابتة (مثل what_i_do, my_edge, who_i_am) بالإنجليزي كما هي — لأنها مفاتيح برمجية مش نصوص للقارئ.\n\n${SYSTEM_PROMPT}`
-    : SYSTEM_PROMPT;
-
   const res = await claudeFetch(apiKey, {
     model: "claude-haiku-4-5",
     max_tokens: 4000,
-    system,
+    system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userPrompt }],
   });
 

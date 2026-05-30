@@ -209,6 +209,24 @@ export function ChatClient() {
     }
   }
 
+  function translateLastToArabic() {
+    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+    if (!lastAssistant || loading) return;
+    const prompt = `Translate the post below into natural conversational Lebanese Arabic — the everyday spoken dialect Lebanese people actually write on LinkedIn. NOT classical فصحى.
+
+Rules:
+- Use spoken Lebanese words: هيدا، هيك، شو، ليش، بدي، فيك، منيح، كتير، عنجد، هلأ، لازم، بقدر، عم، رح، مش، ما، لحتى، حتى.
+- Keep it casual, direct, conversational — like a friend talking.
+- Preserve the original meaning, structure, line breaks, hooks, lists, and CTAs.
+- Keep brand names, links, hashtags, and English product names in English.
+- Do NOT add commentary or explanation. Output the translated post only.
+
+Post to translate:
+
+${lastAssistant.content}`;
+    send(prompt);
+  }
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -401,6 +419,17 @@ export function ChatClient() {
                   {cmd.icon} {cmd.label}
                 </button>
               ))}
+              {messages.some((m) => m.role === "assistant") && (
+                <button
+                  onClick={translateLastToArabic}
+                  disabled={loading}
+                  className="px-3 py-1.5 rounded-full border text-xs font-medium transition-colors disabled:opacity-50"
+                  style={{ borderColor: "var(--vl-accent)", color: "var(--vl-accent)", background: "white" }}
+                  title="Translate the last reply into Lebanese Arabic"
+                >
+                  🌐 Translate to Arabic
+                </button>
+              )}
             </div>
           )}
 

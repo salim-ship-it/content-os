@@ -209,10 +209,7 @@ export function ChatClient() {
     }
   }
 
-  function translateLastToArabic() {
-    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
-    if (!lastAssistant || loading) return;
-    const prompt = `Translate the post below into natural conversational Lebanese Arabic — the everyday spoken dialect Lebanese people actually write on LinkedIn. NOT classical فصحى.
+  const TRANSLATE_RULES = `Translate the post below into natural conversational Lebanese Arabic — the everyday spoken dialect Lebanese people actually write on LinkedIn. NOT classical فصحى.
 
 Rules:
 - Use spoken Lebanese words: هيدا، هيك، شو، ليش، بدي، فيك، منيح، كتير، عنجد، هلأ، لازم، بقدر، عم، رح، مش، ما، لحتى، حتى.
@@ -223,8 +220,17 @@ Rules:
 
 Post to translate:
 
-${lastAssistant.content}`;
-    send(prompt);
+`;
+
+  function translateToArabic() {
+    if (loading) return;
+    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+    if (lastAssistant) {
+      send(TRANSLATE_RULES + lastAssistant.content);
+    } else {
+      setInput(TRANSLATE_RULES);
+      inputRef.current?.focus();
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -347,6 +353,14 @@ ${lastAssistant.content}`;
                     {cmd.icon} {cmd.label}
                   </button>
                 ))}
+                <button
+                  onClick={translateToArabic}
+                  className="px-4 py-2.5 rounded-full border text-sm font-medium transition-all hover:shadow-sm"
+                  style={{ borderColor: "var(--vl-accent)", color: "var(--vl-accent)", background: "white" }}
+                  title="Paste any post and translate it to Lebanese Arabic"
+                >
+                  🌐 Translate to Arabic
+                </button>
               </div>
             </div>
           </div>
@@ -419,17 +433,15 @@ ${lastAssistant.content}`;
                   {cmd.icon} {cmd.label}
                 </button>
               ))}
-              {messages.some((m) => m.role === "assistant") && (
-                <button
-                  onClick={translateLastToArabic}
-                  disabled={loading}
-                  className="px-3 py-1.5 rounded-full border text-xs font-medium transition-colors disabled:opacity-50"
-                  style={{ borderColor: "var(--vl-accent)", color: "var(--vl-accent)", background: "white" }}
-                  title="Translate the last reply into Lebanese Arabic"
-                >
-                  🌐 Translate to Arabic
-                </button>
-              )}
+              <button
+                onClick={translateToArabic}
+                disabled={loading}
+                className="px-3 py-1.5 rounded-full border text-xs font-medium transition-colors disabled:opacity-50"
+                style={{ borderColor: "var(--vl-accent)", color: "var(--vl-accent)", background: "white" }}
+                title="Translate the last reply into Lebanese Arabic"
+              >
+                🌐 Translate to Arabic
+              </button>
             </div>
           )}
 

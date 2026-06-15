@@ -119,9 +119,9 @@ ${p.content || "(no content logged)"}
 ${truncate(p.content, 500)}`
   ).join("\n\n---\n\n");
 
-  return `You are a LinkedIn content coach. Your job is to look at Salim's actual posts and tell him exactly what to change -- line by line, word by word. Not trends. Not patterns. Specific rewrites and fixes he can apply today.
+  return `You are a LinkedIn content coach. Your job is to look at the user's actual posts and tell him exactly what to change -- line by line, word by word. Not trends. Not patterns. Specific rewrites and fixes he can apply today.
 
-## Salim's 5 Most Recent Posts (full text)
+## the user's 5 Most Recent Posts (full text)
 
 ${recentSection}
 
@@ -151,7 +151,7 @@ For each of the 5 recent posts above, give a short verdict:
 
 ### What to post next
 
-Based on what performed best and what the top creators are getting engagement on right now, give Salim 2 specific post ideas:
+Based on what performed best and what the top creators are getting engagement on right now, give the user 2 specific post ideas:
 - The exact hook (written out, not described)
 - The format (list, story, hot take, breakdown)
 - Why this will work (reference a specific creator post or his own best-performing post)

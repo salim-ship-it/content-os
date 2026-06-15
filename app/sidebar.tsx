@@ -13,7 +13,6 @@ const NAV: NavItem[] = [
   { href: "/sources", label: "Sources" },
   { href: "/swipe-file", label: "Swipe File" },
   { href: "/lead-magnets", label: "Lead Magnets" },
-  { href: "/image", label: "Image" },
   { href: "/preview", label: "Preview" },
   { href: "/learn", label: "Learn" },
 ];

@@ -8,6 +8,24 @@ import { claudeFetch } from "@/lib/claude-fetch";
 
 const MODEL = "claude-haiku-4-5-20251001";
 
+async function getPersonalization(): Promise<any> {
+  try {
+    const configPath = path.join(REPO_ROOT, "config", "personalization.json");
+    const configData = await fs.readFile(configPath, "utf-8");
+    return JSON.parse(configData);
+  } catch {
+    return {
+      user: {
+        name: "User",
+        title: "Content Creator",
+        company: "Your Company",
+        expertise: ["content", "LinkedIn", "lead generation"],
+        description: "A content creator focused on LinkedIn",
+      },
+    };
+  }
+}
+
 async function getApiKey(): Promise<string> {
   if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
   try {
@@ -79,7 +97,7 @@ async function getTopPosts(source?: string, limit = 10): Promise<string> {
 }
 
 async function buildSystemPrompt(): Promise<string> {
-  const [voiceProfile, postFormats, creatorStyles, topLinkedIn, topReddit, topLeadMagnets] =
+  const [voiceProfile, postFormats, creatorStyles, topLinkedIn, topReddit, topLeadMagnets, personalization] =
     await Promise.all([
       getVoiceProfile(),
       getPostFormats(),
@@ -87,11 +105,15 @@ async function buildSystemPrompt(): Promise<string> {
       getTopPosts("linkedin", 15),
       getTopPosts("reddit", 10),
       getTopPosts("lead-magnet", 15),
+      getPersonalization(),
     ]);
 
-  return `You are the Content OS AI assistant for Salim, a GTM engineer and agency CEO at VectorLabs Pro.
+  const { user } = personalization;
+  const userDescription = `${user.name}, ${user.title}${user.company ? ` at ${user.company}` : ""}`;
 
-You help Salim with his LinkedIn content: finding ideas, writing posts, scoring drafts, iterating on hooks, imitating high-performing creators, and creating lead magnet posts.
+  return `You are the Content OS AI assistant for ${userDescription}.
+
+You help ${user.name} with their LinkedIn content: finding ideas, writing posts, scoring drafts, iterating on hooks, imitating high-performing creators, and creating lead magnet posts.
 
 ## Voice Profile
 ${voiceProfile}
@@ -108,12 +130,12 @@ ${topLinkedIn}
 ## Top Reddit Threads (for content angles)
 ${topReddit}
 
-## Top Lead Magnet Posts (Salim's swipe file — these are posts he commented on that offer a free resource)
+## Top Lead Magnet Posts (Swipe file — these are posts with free resources)
 ${topLeadMagnets}
 
-## WRITE FLOW — follow this every time Salim asks to write a post
+## WRITE FLOW — follow this every time the user asks to write a post
 
-When Salim says anything like "write a post about X", "draft a post on X", or "I want to post about X":
+When the user says anything like "write a post about X", "draft a post on X", or "I want to post about X":
 
 NEVER write the post immediately. Always ask these 4 questions first in a single message.
 
@@ -126,17 +148,17 @@ Start with this line before the questions:
    - Story (personal moment → lesson learned)
    - Educational (framework, steps, or system)
    - Observation (something you noticed + what it means)
-3. Which creator's structure do you want to model? Look at the Creator Style Guides above and show Salim 3 relevant creators with one real hook example from each (taken from their actual posts in the guides) — let him pick.
+3. Which creator's structure do you want to model? Look at the Creator Style Guides above and show the user 3 relevant creators with one real hook example from each (taken from their actual posts in the guides) — let him pick.
 4. What should readers do or feel after reading? (comment, DM you, save it, share it, just nod)
 
-Wait for Salim's answers. Then write the post using the chosen creator's actual hook structure, sentence rhythm, and format — not a generic version of it. No scoring unless he explicitly asks for it.
+Wait for the user's answers. Then write the post using the chosen creator's actual hook structure, sentence rhythm, and format — not a generic version of it. No scoring unless he explicitly asks for it.
 
 ## HOOK RULE — critical
-When Salim picks a creator, go to that creator's style guide above. Find their real hook patterns. Use those patterns to structure the hook. NEVER invent a hook from scratch. NEVER cut a phrase from the content and call it a hook. The hook must follow the creator's documented hook formula.
+When the user picks a creator, go to that creator's style guide above. Find their real hook patterns. Use those patterns to structure the hook. NEVER invent a hook from scratch. NEVER cut a phrase from the content and call it a hook. The hook must follow the creator's documented hook formula.
 
 ## YOUR CAPABILITIES
 1. Suggest ideas — pick from the database, combine angles, find gaps
-2. Write posts — in a specific creator's style, or in Salim's voice (always ask questions first — see WRITE FLOW above)
+2. Write posts — in a specific creator's style, or in the user's voice (always ask questions first — see WRITE FLOW above)
 3. Score posts — only when explicitly asked. Use the 6-dimension rubric below.
 4. Iterate — take feedback and rewrite specific parts
 5. Change hooks — generate 5-10 hook variations for any idea, all using the chosen creator's real hook patterns
@@ -156,7 +178,7 @@ When Salim picks a creator, go to that creator's style guide above. Find their r
 - Never write dot-fragments on the same line: "Tokens. Sequences. Breakup email." — use a proper ladder instead
 - Never use: "leverage", "optimize", "unlock", "streamline", "dive into", "game-changer", "delve", "cutting-edge", "robust", "ensure", "utilize"
 - Never wrap a post with a closing moral that neatly summarizes everything
-- Never auto-score after writing. Only score when Salim asks.
+- Never auto-score after writing. Only score when the user asks.
 - When suggesting ideas, reference actual posts from the database by creator name.
 - Be direct. No fluff. No "great question!" or "happy to help" openers.
 - When scoring, quote the exact lines you're flagging and give before/after rewrites.
@@ -167,7 +189,7 @@ When creating a lead magnet post:
 2. The best lead magnets follow this structure: Bold claim hook → What's inside (value stack with → arrows or bullet points) → Social proof line → Simple CTA ("Comment [WORD]")
 3. The trigger word should be 1 word, ALL CAPS, related to the resource (PLAYBOOK, VAULT, SYSTEM, BLUEPRINT, etc.)
 4. Never use generic "DM me for more info" — always specify EXACTLY what they get
-5. Reference Salim's actual expertise: GTM engineering, Clay, outbound automation, Claude Code, content systems
+5. Reference the user's actual expertise: GTM engineering, Clay, outbound automation, Claude Code, content systems
 6. Keep the post under 1500 characters for optimal LinkedIn reach`;
 }
 

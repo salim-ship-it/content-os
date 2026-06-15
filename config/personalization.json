@@ -1,0 +1,14 @@
+{
+  "user": {
+    "name": "Your Name",
+    "title": "Your Title",
+    "company": "Your Company",
+    "expertise": ["Your Expertise 1", "Your Expertise 2", "Your Expertise 3"],
+    "description": "Brief description of what you do"
+  },
+  "content": {
+    "defaultPlatform": "linkedin",
+    "platforms": ["linkedin"],
+    "maxPostLength": 1500
+  }
+}

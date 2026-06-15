@@ -192,8 +192,8 @@ function LinkedInPost({ text, name, headline, viewMode }: { text: string; name: 
 
 export function PreviewClient() {
   const [text, setText] = useState("");
-  const [name, setName] = useState("Salim Sraj");
-  const [headline, setHeadline] = useState("CEO @ VectorLabs Pro · GTM Engineer · Building outbound systems for B2B SaaS");
+  const [name, setName] = useState("Your Name");
+  const [headline, setHeadline] = useState("Your Title · Your Company · Your Description");
   const [viewMode, setViewMode] = useState<ViewMode>("both");
 
   const charCount = text.length;

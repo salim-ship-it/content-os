@@ -3,6 +3,7 @@ import { getSupabase } from "@/lib/supabase";
 import { promises as fs } from "fs";
 import path from "path";
 import { buildDiagram, type DiagramSpec } from "@/lib/diagram-builder";
+import Anthropic from "@anthropic-ai/sdk";
 
 // Claude returns a DiagramSpec (structured JSON). The diagram-builder then
 // produces the Excalidraw scene programmatically — guaranteeing text renders.
@@ -141,28 +142,16 @@ export const generateExcalidraw = inngest.createFunction(
       const key = await getAnthropicKey();
       const canvas = canvasFromFormat(format);
 
-      const apiRes = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": key,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-haiku-4-5",
-          max_tokens: 2048,
-          system: SYSTEM_PROMPT,
-          tools: [TOOL],
-          tool_choice: { type: "tool", name: "create_diagram_spec" },
-          messages: [{ role: "user", content: brief }],
-        }),
+      const client = new Anthropic({ apiKey: key });
+      const data = await client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 2048,
+        system: SYSTEM_PROMPT,
+        tools: [TOOL],
+        tool_choice: { type: "tool", name: "create_diagram_spec" },
+        messages: [{ role: "user", content: brief }],
       });
 
-      if (!apiRes.ok) {
-        const text = await apiRes.text();
-        throw new Error(`Anthropic ${apiRes.status}: ${text.slice(0, 400)}`);
-      }
-      const data = await apiRes.json();
       const toolUse = (
         data.content as { type: string; name?: string; input?: unknown }[]
       )?.find(

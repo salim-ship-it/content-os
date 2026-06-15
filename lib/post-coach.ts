@@ -4,7 +4,7 @@ import { POST_COACH_DIR } from "./paths";
 import { getSupabase } from "./supabase";
 import { claudeFetch } from "./claude-fetch";
 
-const MODEL = "claude-haiku-4-5";
+const MODEL = "claude-haiku-4-5-20251001";
 const CACHE_FILE = path.join(POST_COACH_DIR, "latest.json");
 
 export type PostCoachCache = {

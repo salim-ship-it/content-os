@@ -5,7 +5,7 @@ import type { WinningPost } from "./winning-posts";
 import { analyzeCreator } from "./creator-analysis";
 import { claudeFetch } from "./claude-fetch";
 
-const MODEL = "claude-haiku-4-5";
+const MODEL = "claude-haiku-4-5-20251001";
 
 export type CreatorInsightsCache = {
   creator: string;

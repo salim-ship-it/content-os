@@ -134,7 +134,7 @@ ${JSON.stringify(onboarding ?? { name: "Unknown" }, null, 2)}
 Generate the content pillars JSON now.`;
 
   const res = await claudeFetch(apiKey, {
-    model: "claude-haiku-4-5",
+    model: "claude-haiku-4-5-20251001",
     max_tokens: 4000,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userPrompt }],

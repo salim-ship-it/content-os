@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { REPO_ROOT, VOICE_PROFILE_PATH, POST_FORMATS_PATH, CREATOR_STYLES_DIR } from "@/lib/paths";
 import { claudeFetch } from "@/lib/claude-fetch";
 
-const MODEL = "claude-haiku-4-5";
+const MODEL = "claude-haiku-4-5-20251001";
 
 async function getApiKey(): Promise<string> {
   if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;

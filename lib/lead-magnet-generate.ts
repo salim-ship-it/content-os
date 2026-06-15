@@ -336,7 +336,7 @@ ${contextBlock}
 Write the asset now. Output ONLY the asset content in the requested format — no preamble, no closing note, no "here is your lead magnet". Follow the internal structure, use natural topic-specific headings, and ground every specific claim in the user context above.`;
 
   const res = await claudeFetch(apiKey, {
-    model: "claude-haiku-4-5",
+    model: "claude-haiku-4-5-20251001",
     max_tokens: 8000,
     system,
     messages: [{ role: "user", content: userPrompt }],

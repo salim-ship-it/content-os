@@ -63,7 +63,7 @@ The profile must have these sections:
 Be specific and actionable. Use their actual words where possible. This profile will be used by an AI to write LinkedIn posts in their voice.`;
 
   const response = await claudeFetch(apiKey, {
-    model: "claude-haiku-4-5",
+    model: "claude-haiku-4-5-20251001",
     max_tokens: 4096,
     system: systemPrompt,
     messages: [

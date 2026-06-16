@@ -14,7 +14,6 @@ const NAV: NavItem[] = [
   { href: "/swipe-file", label: "Swipe File" },
   { href: "/lead-magnets", label: "Lead Magnets" },
   { href: "/preview", label: "Preview" },
-  { href: "/learn", label: "Learn" },
 ];
 
 const STORAGE_KEY = "vl.sidebar.collapsed";

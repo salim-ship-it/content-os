@@ -21,15 +21,19 @@ cd content-os
 npm install
 ```
 
-### 2. Set Up Your Environment
+### 2. Set Up Your APIs
 
-Create a `.env.local` file with your Anthropic API key:
+**Quick setup (required APIs only):**
 
 ```bash
-ANTHROPIC_API_KEY=your_api_key_here
+cp .env.example .env.local
 ```
 
-Get your free API key at: https://console.anthropic.com/
+Then add your API keys:
+- `ANTHROPIC_API_KEY` from https://console.anthropic.com/
+- `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` from https://supabase.com/
+
+For detailed setup of all APIs (Apify, vidIQ, Clay, etc.), see **[SETUP.md](./SETUP.md)**.
 
 ### 3. Personalize It
 
@@ -110,6 +114,9 @@ When you ask for help, the AI uses all of this context to match your exact voice
 - **Database** — Supabase (PostgreSQL)
 - **AI** — Claude API (Anthropic)
 - **File Storage** — Local file system for config and profiles
+- **APIs** — Apify (scraping), OpenRouter (AI), vidIQ (mining), Clay (enrichment)
+  - All configured in `config/apis.ts`
+  - See [SETUP.md](./SETUP.md) for detailed API configuration
 
 ## Deploying
 

@@ -28,17 +28,17 @@ export const DEFAULT_SOURCES: Source[] = [
   { kind: "reddit", name: "r/startup", url: "https://www.reddit.com/r/startup/", enabled: true, maxPosts: 25, note: "Startup discussions, founder pain points" },
   { kind: "reddit", name: "r/GTMbuilders", url: "https://www.reddit.com/r/GTMbuilders/", enabled: true, maxPosts: 25, note: "GTM builders, signal-based outbound, AI sales tooling (niche, all posts)" },
 
-  // Newsletters
-  { kind: "newsletter", name: "GTM Engineer Pulse", url: "https://gtmengineerschool.substack.com", enabled: true, maxPosts: 0, note: "Best weekly roundup — Clay, signals, outbound, AI tools" },
-  { kind: "newsletter", name: "The Signal", url: "https://thesignal.substack.com", enabled: true, maxPosts: 0, note: "Brendan Short & Patrick Spychalski — GTM engineering deep dives, agent workflows" },
-  { kind: "newsletter", name: "GTMnow", url: "https://thegtmnewsletter.substack.com", enabled: true, maxPosts: 0, note: "Top GTM leaders, outbound + revenue ops strategy" },
-  { kind: "newsletter", name: "Growth Unhinged", url: "https://growthunhinged.substack.com", enabled: true, maxPosts: 0, note: "Kyle Poyar — AI credits, pricing models, GTM strategy, Clay breakdowns" },
-  { kind: "newsletter", name: "ConnectedGTM", url: "https://connectedgtm.com", enabled: true, maxPosts: 0, note: "Stuart Balcombe — Clay GTM Engineer, HubSpot playbooks, automation" },
-  { kind: "newsletter", name: "Outbound Kitchen", url: "https://outboundkitchen.substack.com", enabled: true, maxPosts: 0, note: "Cold outbound tactics, casual + practical tone" },
-  { kind: "newsletter", name: "ColdIQ Newsletter", url: "https://coldiq.com", enabled: false, maxPosts: 0, note: "Cold email + AI outbound, tool breakdowns, campaign teardowns" },
-  { kind: "newsletter", name: "Shawn Tenam Substack", url: "https://shawntenam.substack.com", enabled: true, maxPosts: 0, note: "Claude Code + GTM engineering, built in public" },
-  { kind: "newsletter", name: "The AI Corner", url: "https://the-ai-corner.com", enabled: true, maxPosts: 0, note: "AI GTM playbooks, what's actually working in 2026" },
-  { kind: "newsletter", name: "GTM Strategist", url: "https://knowledge.gtmstrategist.com", enabled: true, maxPosts: 0, note: "Maja Voje — Full GTM strategy, AI workflows, positioning frameworks" },
+  // Instagram
+  { kind: "instagram", name: "alexhormozi", url: "https://www.instagram.com/alexhormozi/", enabled: true, maxPosts: 20, note: "Business, sales funnels, GTM strategies, short-form educational content" },
+  { kind: "instagram", name: "garyvee", url: "https://www.instagram.com/garyvee/", enabled: true, maxPosts: 20, note: "Marketing, business advice, daily motivational content" },
+  { kind: "instagram", name: "naval", url: "https://www.instagram.com/naval/", enabled: true, maxPosts: 20, note: "Startup wisdom, business insights, philosophy" },
+  { kind: "instagram", name: "tferriss", url: "https://www.instagram.com/tferriss/", enabled: true, maxPosts: 15, note: "Tools, business growth, lifestyle optimization" },
+  { kind: "instagram", name: "ankipaul", url: "https://www.instagram.com/ankipaul/", enabled: true, maxPosts: 20, note: "Marketing, sales, B2B growth strategies" },
+  { kind: "instagram", name: "thealexbanay", url: "https://www.instagram.com/thealexbanay/", enabled: true, maxPosts: 20, note: "Startup insights, business lessons, personal growth" },
+  { kind: "instagram", name: "sarahtalib", url: "https://www.instagram.com/sarahtalib/", enabled: true, maxPosts: 15, note: "SaaS marketing, growth strategies, founder advice" },
+  { kind: "instagram", name: "davidbeckham", url: "https://www.instagram.com/davidbeckham/", enabled: false, maxPosts: 10, note: "Personal brand, lifestyle, engagement strategies" },
+  { kind: "instagram", name: "thejpg", url: "https://www.instagram.com/thejpg/", enabled: true, maxPosts: 20, note: "Growth marketing, conversion tactics, analytics" },
+  { kind: "instagram", name: "eladgil", url: "https://www.instagram.com/eladgil/", enabled: true, maxPosts: 15, note: "Startup strategy, GTM, founder wisdom" },
 
   // YouTube
   { kind: "youtube", name: "Lenny's Podcast", url: "https://www.youtube.com/@LennysPodcast", enabled: true, maxPosts: 10, note: "Product, growth, GTM interviews from top operators" },

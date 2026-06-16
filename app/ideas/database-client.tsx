@@ -11,23 +11,23 @@ const TYPE_LABELS: Record<string, string> = {
   transparency: "Transparency",
   announcements: "Announcement", announcement: "Announcement",
   engagement: "Engagement",
-  reddit: "Reddit", newsletters: "Newsletter", youtube: "YouTube",
+  reddit: "Reddit", instagram: "Instagram", youtube: "YouTube",
 };
 
 const SOURCE_LABELS: Record<string, string> = {
   all: "All", linkedin: "LinkedIn", reddit: "Reddit",
-  newsletter: "Newsletter", youtube: "YouTube",
+  instagram: "Instagram", youtube: "YouTube",
 };
 
 const PLATFORM_ICONS: Record<SourceKind, string> = {
   linkedin: "/icons/linkedin.svg",
   reddit: "/icons/reddit.svg",
   youtube: "/icons/youtube.svg",
-  newsletter: "/icons/newsletter.svg",
+  instagram: "/icons/instagram.svg",
 };
 
 type SourceTab = "all" | SourceKind;
-const SOURCE_TABS: SourceTab[] = ["all", "linkedin", "reddit", "newsletter", "youtube"];
+const SOURCE_TABS: SourceTab[] = ["all", "linkedin", "reddit", "instagram", "youtube"];
 
 type DateTab = "all" | "today" | "week";
 const DATE_TABS: { value: DateTab; label: string }[] = [

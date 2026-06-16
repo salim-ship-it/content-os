@@ -1,11 +1,11 @@
 import { getSupabaseServer } from "@/lib/supabase-server";
 import type { WinningPost } from "@/lib/winning-posts";
 
-export type SourceKind = "linkedin" | "reddit" | "newsletter" | "youtube";
+export type SourceKind = "linkedin" | "reddit" | "instagram" | "youtube";
 
 /**
  * Filter posts down to ones from sources the user actually added.
- * - linkedin / newsletter / youtube: exact creator-name match (case-insensitive).
+ * - linkedin / instagram / youtube: exact creator-name match (case-insensitive).
  * - reddit: prefix match — creator field is "r/Sub (u/User)", source name is "r/Sub".
  *
  * If the user has no sources of a given kind, no posts of that kind pass.
@@ -18,7 +18,7 @@ export function scopePostsToUserSources(
   const exactByKind: Record<SourceKind, Set<string>> = {
     linkedin: new Set(),
     reddit: new Set(),
-    newsletter: new Set(),
+    instagram: new Set(),
     youtube: new Set(),
   };
   for (const s of sources) {

@@ -6,11 +6,11 @@ import type { Source, SourceKind } from "@/lib/sources";
 const KIND_LABELS: Record<SourceKind, string> = {
   linkedin: "LinkedIn",
   reddit: "Reddit",
-  newsletter: "Newsletters",
+  instagram: "Instagram",
   youtube: "YouTube",
 };
 
-const KINDS: SourceKind[] = ["linkedin", "reddit", "newsletter", "youtube"];
+const KINDS: SourceKind[] = ["linkedin", "reddit", "instagram", "youtube"];
 
 export function SourcesClient({ initialSources }: { initialSources: Source[] }) {
   const [sources, setSources] = useState(initialSources);
@@ -47,7 +47,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
 
   /* --- counts --- */
   const counts: Record<SourceKind, number> = useMemo(() => {
-    const c: Record<SourceKind, number> = { linkedin: 0, reddit: 0, newsletter: 0, youtube: 0 };
+    const c: Record<SourceKind, number> = { linkedin: 0, reddit: 0, instagram: 0, youtube: 0 };
     for (const s of sources) c[s.kind] = (c[s.kind] || 0) + 1;
     return c;
   }, [sources]);
@@ -87,7 +87,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
         url,
         note,
         enabled: true,
-        maxPosts: activeTab === "newsletter" ? 0 : maxPosts,
+        maxPosts: activeTab === "instagram" ? 0 : maxPosts,
       }),
     });
     const updated = await res.json();
@@ -231,7 +231,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
-          {activeTab !== "newsletter" && (
+          {activeTab !== "instagram" && (
             <input
               className="col-span-1 rounded-lg border px-2 py-2 text-sm outline-none text-center"
               style={{ borderColor: "var(--vl-border)", color: "var(--vl-text)", background: "var(--vl-bg-card)" }}
@@ -262,7 +262,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
               <th className="text-left px-4 py-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>Name</th>
               <th className="text-left px-4 py-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>URL</th>
               <th className="text-left px-4 py-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>Note</th>
-              {activeTab !== "newsletter" && (
+              {activeTab !== "instagram" && (
                 <th className="text-right px-4 py-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>Max</th>
               )}
               <th className="text-center px-4 py-3 font-medium" style={{ color: "var(--vl-text-muted)" }}>Status</th>
@@ -289,7 +289,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
                 <td className="px-4 py-3 text-sm" style={{ color: "var(--vl-text-muted)" }}>
                   {source.note || "—"}
                 </td>
-                {activeTab !== "newsletter" && (
+                {activeTab !== "instagram" && (
                   <td className="px-4 py-3 text-right text-sm" style={{ color: "var(--vl-text)" }}>
                     {source.maxPosts}
                   </td>
@@ -322,7 +322,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={activeTab !== "newsletter" ? 6 : 5} className="px-4 py-12 text-center" style={{ color: "var(--vl-text-muted)" }}>
+                <td colSpan={activeTab !== "instagram" ? 6 : 5} className="px-4 py-12 text-center" style={{ color: "var(--vl-text-muted)" }}>
                   No {KIND_LABELS[activeTab]} sources yet.
                 </td>
               </tr>

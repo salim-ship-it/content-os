@@ -23,7 +23,9 @@ export function scopePostsToUserSources(
   };
   for (const s of sources) {
     if (!s.enabled) continue;
-    exactByKind[s.kind].add(norm(s.name));
+    if (s.kind in exactByKind) {
+      exactByKind[s.kind as SourceKind].add(norm(s.name));
+    }
   }
 
   return posts.filter((p) => {

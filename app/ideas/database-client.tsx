@@ -24,10 +24,11 @@ const PLATFORM_ICONS: Record<SourceKind, string> = {
   reddit: "/icons/reddit.svg",
   youtube: "/icons/youtube.svg",
   instagram: "/icons/instagram.svg",
+  newsletter: "/icons/newsletter.svg",
 };
 
 type SourceTab = "all" | SourceKind;
-const SOURCE_TABS: SourceTab[] = ["all", "linkedin", "reddit", "instagram", "youtube"];
+const SOURCE_TABS: SourceTab[] = ["all", "linkedin", "reddit", "instagram", "newsletter", "youtube"];
 
 type DateTab = "all" | "today" | "week";
 const DATE_TABS: { value: DateTab; label: string }[] = [
@@ -183,7 +184,7 @@ export function DatabaseClient({ initialPosts }: { initialPosts: WinningPost[] }
   const [drawer, setDrawer] = useState<WinningPost | null>(null);
 
   const tabCounts = useMemo(() => {
-    const c: Record<SourceTab, number> = { all: initialPosts.length, linkedin: 0, reddit: 0, newsletter: 0, youtube: 0 };
+    const c: Record<SourceTab, number> = { all: initialPosts.length, linkedin: 0, reddit: 0, instagram: 0, newsletter: 0, youtube: 0 };
     for (const p of initialPosts) c[p.source] = (c[p.source] || 0) + 1;
     return c;
   }, [initialPosts]);

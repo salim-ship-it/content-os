@@ -42,7 +42,9 @@ async function exportPosts() {
       posts: data,
     };
 
-    const outputPath = path.join(process.cwd(), "posts-export.json");
+    const exportsDir = path.join(process.cwd(), "data", "exports");
+    fs.mkdirSync(exportsDir, { recursive: true });
+    const outputPath = path.join(exportsDir, "posts-export.json");
     fs.writeFileSync(outputPath, JSON.stringify(exportData, null, 2));
 
     console.log(`✅ Exported ${data.length} posts to ${outputPath}`);

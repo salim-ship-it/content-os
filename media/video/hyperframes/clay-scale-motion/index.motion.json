@@ -1,0 +1,1 @@
+{"duration":6,"assertions":[{"kind":"appearsBy","selector":".number","bySec":0.7},{"kind":"before","a":".number","b":".gone"},{"kind":"before","a":".gone","b":".code-copy"},{"kind":"staysInFrame","selector":".number"},{"kind":"keepsMoving","withinSelector":"#root","maxStaticSec":1.5}]}

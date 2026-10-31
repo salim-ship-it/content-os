@@ -1,7 +1,7 @@
 import { getSupabaseServer } from "@/lib/supabase-server";
-import type { WinningPost } from "@/lib/winning-posts";
+import type { SourceKind, WinningPost } from "@/lib/winning-posts";
 
-export type SourceKind = "linkedin" | "reddit" | "instagram" | "youtube";
+export type { SourceKind } from "@/lib/winning-posts";
 
 /**
  * Filter posts down to ones from sources the user actually added.
@@ -19,6 +19,7 @@ export function scopePostsToUserSources(
     linkedin: new Set(),
     reddit: new Set(),
     instagram: new Set(),
+    newsletter: new Set(),
     youtube: new Set(),
   };
   for (const s of sources) {

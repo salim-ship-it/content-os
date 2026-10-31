@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "posts": [],
+  "metricDefinitions": {
+    "impressions": "LinkedIn post impressions",
+    "profileViews": "Profile views attributable to the publishing period",
+    "comments": "Non-author comments",
+    "saves": "LinkedIn saves when available",
+    "qualifiedConversations": "Relevant inbound or outbound conversations attributable to the post"
+  }
+}

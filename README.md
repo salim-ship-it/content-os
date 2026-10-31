@@ -1,158 +1,124 @@
 # Content OS
 
-A personal AI-powered LinkedIn content creation system. Write better posts faster by leveraging your own voice, style, and content database.
+An evidence-based LinkedIn content system for turning real RevOps and GTM work into posts, reusable assets, and a measurable content strategy.
 
-## What It Does
+The default workspace is built for **Salim Sraj**. It combines Salim's authenticated voice profile, verified experience, publishing guardrails, creator references, and published-content data before generating anything.
 
-- **Generate ideas** — AI suggests post angles based on your interests and creator analysis
-- **Write posts** — Get AI-assisted writing in your specific voice and style
-- **Get feedback** — Post coach analyzes your content and suggests specific improvements
-- **Build lead magnets** — Create posts that offer free resources (playbooks, templates, guides)
-- **Track sources** — Store links, articles, and insights for future content
-- **Preview posts** — See exactly how your posts will look on LinkedIn
+## What it does
 
-## Getting Started
+- Extracts post ideas from notes, meetings, workflows, and observations
+- Writes and edits LinkedIn posts in Salim's voice
+- Verifies claims against an approved evidence library
+- Generates materially different hook directions
+- Analyzes creator structures without copying their language
+- Manages sources, swipe files, lead magnets, and previews
+- Repurposes source ideas while retaining content lineage
+- Provides a foundation for learning from published performance
 
-### 1. Clone This Repo
+## Repository map
+
+```text
+app/                         Next.js product
+lib/                         Application modules
+skills/linkedin-content/     Writing and analysis workflows
+data/brands/salim-sraj/      Active brand workspace
+data/creator-styles/         Creator structure references
+content/salim/               Salim's drafts and resources
+content/clients/             Isolated client work
+media/                       Generated graphics and videos
+docs/                        Current documentation
+archive/                     Historical, non-canonical material
+```
+
+See [SCOPE.md](./SCOPE.md), [GLOSSARY.md](./GLOSSARY.md), and [the architecture guide](./docs/architecture.md) before extending the system.
+
+## Content workflow
+
+```text
+Raw material
+    ↓
+Evidence and confidentiality gate
+    ↓
+Single post argument
+    ↓
+Hook exploration
+    ↓
+Draft in Salim's voice
+    ↓
+Voice, factuality, and structure checks
+    ↓
+Final post and optional repurposing
+```
+
+The workflow asks questions only when missing information would materially change the output. It never invents metrics, experiences, opinions, or implementation status.
+
+## Local setup
+
+### 1. Install dependencies
 
 ```bash
-git clone <your-fork-url> content-os
-cd content-os
 npm install
 ```
 
-### 2. Set Up Your APIs
-
-**Quick setup (required APIs only):**
+### 2. Configure environment variables
 
 ```bash
 cp .env.example .env.local
 ```
 
-Then add your API keys:
-- `ANTHROPIC_API_KEY` from https://console.anthropic.com/
-- `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` from https://supabase.com/
+Anthropic and Supabase are required. Individual scripts may also use Apify, Notion, OpenRouter, vidIQ, or Clay.
 
-For detailed setup of all APIs (Apify, vidIQ, Clay, etc.), see **[SETUP.md](./SETUP.md)**.
+### 3. Prepare the database
 
-### 3. Personalize It
+Apply the relevant Supabase migrations before running authenticated features. Historical setup instructions remain under `archive/legacy-docs/`, but they are not the current source of truth.
 
-Edit `config/personalization.json` with your information:
-
-```json
-{
-  "user": {
-    "name": "Your Name",
-    "title": "Your Title",
-    "company": "Your Company",
-    "expertise": ["Topic 1", "Topic 2", "Topic 3"],
-    "description": "What you do"
-  }
-}
-```
-
-See [PERSONALIZATION.md](./PERSONALIZATION.md) for full setup instructions.
-
-### 4. Run It
+### 4. Run locally
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000).
 
-## First Steps in the App
+## Active brand workspace
 
-1. **Set up your voice** — Go to `/onboarding/voice` and describe your writing style
-2. **Add creators** — Go to `/onboarding/creators` and add people whose writing you admire
-3. **Start using chat** — Go to `/` and talk to your AI assistant
-4. **Create content** — Use Ideas, Sources, Lead Magnets, and other tools
+The default brand is `data/brands/salim-sraj/`:
 
-## Features
+- `identity.json`: positioning and expertise
+- `voice.md`: writing behavior and language patterns
+- `audience.md`: intended readers and their problems
+- `pillars.md`: recurring editorial territories
+- `evidence.json`: approved, publicly shareable facts
+- `guardrails.md`: confidentiality and publishing constraints
+- `performance.json`: schema for post-performance learning
 
-### Chat
-Your AI assistant that knows your voice. Ask for post ideas, write drafts, get feedback, or iterate on existing posts.
+An authenticated Supabase voice profile overrides the bundled voice file. Set `CONTENT_OS_BRAND` only when selecting another isolated brand workspace.
 
-### Ideas
-Generate LinkedIn post ideas based on your interests, creator analysis, and top-performing content.
+## Skills
 
-### Sources
-Curate content sources, save articles, and build a research database for your writing.
+The LinkedIn workflow lives in [skills/linkedin-content/SKILL.md](./skills/linkedin-content/SKILL.md). Its references separate evidence verification, hooks, post writing, editing, repurposing, and performance analysis.
 
-### Swipe File
-Analyze high-performing posts from creators you study. The system learns their hook patterns and structure.
+Keep skills small and composable. Add a reference when behavior belongs to the existing LinkedIn workflow; add a new skill only when it owns a distinct responsibility.
 
-### Lead Magnets
-Create posts that offer free resources (guides, playbooks, templates, checklists). Track which offers perform best.
+## Data and privacy
 
-### Post Coach
-Get detailed feedback on your published posts:
-- Hook analysis
-- Structure suggestions
-- CTA improvements
-- Next post recommendations
+- Never commit `.env.local` or service credentials.
+- Review exports and scraped datasets before publishing them.
+- Keep client work isolated under `content/clients/`.
+- Do not use client claims as Salim's evidence.
+- Generated media belongs under `media/`, not the repository root.
+- Portable post exports belong under `data/exports/`.
 
-### Preview
-See exactly how your posts will render on LinkedIn (desktop and mobile).
-
-## How It Works
-
-The system reads from your local files:
-
-- `config/personalization.json` — Your information and preferences
-- `config/voice-profile.md` — Your writing voice and style
-- `config/post-formats.md` — Your post structure rules (optional)
-- `creator-styles/` — Style guides for creators you study
-- `supabase` database — Your posts, sources, and content
-
-When you ask for help, the AI uses all of this context to match your exact voice and give you specific, actionable feedback.
-
-## Architecture
-
-- **Frontend** — Next.js with React, TypeScript, Tailwind CSS
-- **Backend** — Next.js API routes
-- **Database** — Supabase (PostgreSQL)
-- **AI** — Claude API (Anthropic)
-- **File Storage** — Local file system for config and profiles
-- **APIs** — Apify (scraping), OpenRouter (AI), vidIQ (mining), Clay (enrichment)
-  - All configured in `config/apis.ts`
-  - See [SETUP.md](./SETUP.md) for detailed API configuration
-
-## Deploying
-
-This is designed to run locally. If you want to deploy it:
-
-1. Set up a Supabase project
-2. Set environment variables in your hosting platform
-3. Deploy to your hosting (Vercel, Railway, Fly.io, etc.)
-
-For local development only:
+## Verification
 
 ```bash
-npm run dev
+npm run lint
+npx tsc --noEmit
+npm run build
 ```
 
-## FAQ
+TypeScript must pass before production builds. Remaining lint failures are tracked separately and should be cleared before strict CI is enabled.
 
-**Q: Do I need a Supabase account?**  
-A: Yes, for storing posts and sources. Create a free account at supabase.com.
+## Agent-assisted changes
 
-**Q: What if I don't want to use Supabase?**  
-A: Edit the API routes in `app/api/` to use a different database.
-
-**Q: How much does this cost?**  
-A: Anthropic charges for API usage. Free tier starts at $5/month credit.
-
-**Q: How do I improve content quality?**  
-A: Better voice profile = better content. Spend time describing your exact style.
-
-**Q: Can I customize this further?**  
-A: Yes. All the code is yours. Edit components, API routes, prompts, whatever you need.
-
-## Questions?
-
-Check [PERSONALIZATION.md](./PERSONALIZATION.md) for detailed setup and configuration.
-
----
-
-**Built with Next.js, Claude, and Supabase.**
+Read [AGENTS.md](./AGENTS.md) first. This project uses Next.js 16.2.3; consult the bundled guides under `node_modules/next/dist/docs/` before relying on older Next.js conventions.

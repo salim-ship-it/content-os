@@ -1,6 +1,6 @@
 import { getSupabase } from "./supabase";
 
-export type SourceKind = "linkedin" | "reddit" | "newsletter" | "youtube";
+export type SourceKind = "linkedin" | "reddit" | "instagram" | "newsletter" | "youtube";
 
 export type WinningPost = {
   id: string;

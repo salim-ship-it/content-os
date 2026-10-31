@@ -1,0 +1,23 @@
+{
+  "user": {
+    "name": "Moataz Sonallah",
+    "title": "Personal Brand Coach & Content Strategist",
+    "company": "CreatorPreneur",
+    "expertise": [
+      "Organic content strategy",
+      "Personal brand building",
+      "Audience monetization",
+      "Content funnels",
+      "Creator economy"
+    ],
+    "description": "Helps creators build 6-figure personal brands using organic content strategies. Turns followers into paying customers without paid ads."
+  },
+  "content": {
+    "defaultPlatform": "linkedin",
+    "platforms": ["linkedin"],
+    "maxPostLength": 1500
+  },
+  "location": "Dubai",
+  "socialHandle": "@moataz.esssam",
+  "website": "creatorpreneur.ae"
+}

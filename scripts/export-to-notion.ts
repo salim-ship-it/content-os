@@ -1,5 +1,5 @@
 /**
- * Export posts from posts-export.json to Notion database
+ * Export posts from data/exports/posts-export.json to Notion database
  * Usage: npx ts-node scripts/export-to-notion.ts
  *
  * Make sure you have:
@@ -39,9 +39,9 @@ async function exportToNotion() {
   try {
     console.log("📖 Reading posts export...");
 
-    const exportPath = path.join(process.cwd(), "posts-export.json");
+    const exportPath = path.join(process.cwd(), "data", "exports", "posts-export.json");
     if (!fs.existsSync(exportPath)) {
-      console.error("❌ posts-export.json not found");
+      console.error("❌ data/exports/posts-export.json not found");
       console.error("Run: npx ts-node scripts/export-posts.ts");
       process.exit(1);
     }

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "career-transition-revops",
+    "claim": "Salim moved into a RevOps Manager role after more than a year and a half working as a GTM engineer.",
+    "source": "Salim's first-person account",
+    "status": "approved",
+    "publiclyShareable": true
+  },
+  {
+    "id": "stakeholder-first-week",
+    "claim": "Before launching campaigns or buying tools, Salim interviewed Growth, SDR and AE leadership plus individual sellers to understand the problems and priorities.",
+    "source": "Salim's first-person account",
+    "status": "approved",
+    "publiclyShareable": true
+  },
+  {
+    "id": "saas-classification-test",
+    "claim": "A company-classification prompt was tested manually on 100 records, then expanded to 400 and 1,000 before being applied to the full list.",
+    "source": "Salim's documented workflow",
+    "status": "approved",
+    "publiclyShareable": true
+  },
+  {
+    "id": "clay-scale-evaluation",
+    "claim": "A CRM cleaning and enrichment workflow covering more than 17,000 companies consumed more than 17,000 actions, prompting an evaluation of alternatives.",
+    "source": "Salim's documented workflow",
+    "status": "approved",
+    "publiclyShareable": true
+  },
+  {
+    "id": "champion-moved-workflow",
+    "claim": "Salim built a Champion Moved workflow that tracks relevant contacts from client companies, checks the new company and persona against the ICP, then routes qualified records through HubSpot for Sales assignment.",
+    "source": "Salim's documented workflow",
+    "status": "approved",
+    "publiclyShareable": true
+  }
+]

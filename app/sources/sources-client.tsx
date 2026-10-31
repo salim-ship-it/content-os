@@ -7,10 +7,11 @@ const KIND_LABELS: Record<SourceKind, string> = {
   linkedin: "LinkedIn",
   reddit: "Reddit",
   instagram: "Instagram",
+  newsletter: "Newsletter",
   youtube: "YouTube",
 };
 
-const KINDS: SourceKind[] = ["linkedin", "reddit", "instagram", "youtube"];
+const KINDS: SourceKind[] = ["linkedin", "reddit", "instagram", "newsletter", "youtube"];
 
 export function SourcesClient({ initialSources }: { initialSources: Source[] }) {
   const [sources, setSources] = useState(initialSources);
@@ -47,7 +48,7 @@ export function SourcesClient({ initialSources }: { initialSources: Source[] }) 
 
   /* --- counts --- */
   const counts: Record<SourceKind, number> = useMemo(() => {
-    const c: Record<SourceKind, number> = { linkedin: 0, reddit: 0, instagram: 0, youtube: 0 };
+    const c: Record<SourceKind, number> = { linkedin: 0, reddit: 0, instagram: 0, newsletter: 0, youtube: 0 };
     for (const s of sources) c[s.kind] = (c[s.kind] || 0) + 1;
     return c;
   }, [sources]);

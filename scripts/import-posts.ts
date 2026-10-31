@@ -1,11 +1,16 @@
 /**
  * Import posts from JSON export into Supabase
- * Usage: npx ts-node scripts/import-posts.ts posts-export.json
+ * Usage: npx ts-node scripts/import-posts.ts data/exports/posts-export.json
  */
 
 import { createClient } from "@supabase/supabase-js";
 import * as fs from "fs";
-import * as path from "path";
+
+type ExportedPost = Record<string, unknown> & {
+  id?: string;
+  created_at?: string;
+  updated_at?: string;
+};
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY!;
@@ -18,7 +23,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 const filePath = process.argv[2];
 if (!filePath) {
   console.error("Usage: npx ts-node scripts/import-posts.ts <file-path>");
-  console.error("Example: npx ts-node scripts/import-posts.ts posts-export.json");
+  console.error("Example: npx ts-node scripts/import-posts.ts data/exports/posts-export.json");
   process.exit(1);
 }
 
@@ -41,15 +46,19 @@ async function importPosts() {
       process.exit(1);
     }
 
-    const posts = exportData.posts;
+    const posts = exportData.posts as ExportedPost[];
     console.log(`📊 Found ${posts.length} posts to import`);
 
     // Remove IDs so Supabase generates new ones
-    const postsToImport = posts.map(({ id, ...rest }: any) => ({
-      ...rest,
-      created_at: new Date(rest.created_at).toISOString(),
-      updated_at: new Date(rest.updated_at).toISOString(),
-    }));
+    const postsToImport = posts.map((post) => {
+      const { id: _discardedId, ...rest } = post;
+      void _discardedId;
+      return {
+        ...rest,
+        created_at: rest.created_at ? new Date(String(rest.created_at)).toISOString() : undefined,
+        updated_at: rest.updated_at ? new Date(String(rest.updated_at)).toISOString() : undefined,
+      };
+    });
 
     console.log("⏳ Inserting posts...");
     const { error, data } = await supabase
